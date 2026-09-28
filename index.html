@@ -142,7 +142,7 @@ function screenNet(){
   ${banner()}
   <input id="q" type="search" placeholder="Name oder Angebot suchen" value="${esc(S.q)}"><div class="chips"><button class="chip ${S.cat<0?"on":""}" data-cat="-1">Alle</button>${CATS.map((c,i)=>`<button class="chip ${S.cat===i+1?"on":""}" data-cat="${i+1}">${c}</button>`).join("")}</div>
   <h2>${S.busy?"Suche läuft …":r.length+" "+(r.length===1?"Mitglied":"Mitglieder")}</h2>
-  ${r.map(m=>`<button class="card" data-sel="${m.id}"><div class="av">${ini(m.first_name,m.last_name)}</div><div><b>${esc(m.first_name)} ${esc(m.last_name)}</b><span>${esc(m.headline)}${m.company?", "+esc(m.company):""}<br>${esc(m.location)}</span></div></button>`).join("")||(S.busy?"":"<p>Keine Treffer.</p>")}`;
+  ${r.map(m=>`<button class="card" data-sel="${m.id}"><div class="av">${ini(m.first_name,m.last_name)}</div><div><b>${esc(m.first_name)} ${esc(m.last_name)}</b><span>${esc(m.headline)}${m.company?", "+esc(m.company):""}<br>${esc(m.location)}</span></div></button>`).join("")||(S.busy?"":(S.q||S.cat>=0?"<p>Keine Treffer. Ändere die Suche oder den Bereich.</p>":"<p>Noch keine anderen Mitglieder sichtbar. Sichtbar sind Mitglieder, die freigegeben sind und einen Namen im Profil haben. Dich selbst siehst du hier nicht.</p>"))}`;
 }
 function detail(){
   const m=S.sel;
@@ -154,8 +154,23 @@ function detail(){
   ${m.services&&m.services.length?`<h2>Dienstleistungen</h2>${m.services.map(x=>`<span class="tag">${esc(x)}</span>`).join("")}`:""}
   ${m.specialization?`<h2>Spezialisierung</h2><p>${esc(m.specialization)}</p>`:""}`;
 }
+function viewMe(p){
+  const cat=p.profession_id?CATS[p.profession_id-1]:"";
+  return `<h1>Mein Profil</h1>${banner()}
+  <div class="av big">${ini(p.first_name,p.last_name)}</div>
+  <h1>${esc(p.first_name)} ${esc(p.last_name)}</h1>
+  <p>${esc(p.headline)}${p.company?", "+esc(p.company):""}${p.location?" in "+esc(p.location):""}</p>
+  ${cat?`<span class="tag">${esc(cat)}</span>`:""}
+  ${p.bio?`<h2>Über mich</h2><p>${esc(p.bio)}</p>`:""}
+  ${p.services&&p.services.length?`<h2>Dienstleistungen</h2>${p.services.map(x=>`<span class="tag">${esc(x)}</span>`).join("")}`:""}
+  ${p.specialization?`<h2>Spezialisierung</h2><p>${esc(p.specialization)}</p>`:""}
+  ${p.contact_email?`<h2>Kontakt</h2><p>${esc(p.contact_email)}</p>`:""}
+  <p style="font-size:13px">So sehen dich andere aktive Mitglieder im Netzwerk.</p>
+  <button class="btn" id="btn-edit-profile">Profil bearbeiten</button>`;
+}
 function screenMe(){
   const p=S.me||{};
+  if((p.first_name||p.last_name)&&!S.editing) return viewMe(p);
   return `<h1>Mein Profil</h1><p>Jeder kann etwas gut, ob aus dem Beruf, dem Hobby oder dem Alltag. Zeig, wie du der Community helfen kannst.</p>
   ${banner()}
   <input id="pf-first" placeholder="Vorname" value="${esc(p.first_name)}">
@@ -189,7 +204,16 @@ function screenAdmin(){
   <div class="stats"><div class="stat"><b>${st.gesamt??"…"}</b>Mitglieder gesamt</div><div class="stat"><b>${st.aktiv??"…"}</b>Aktiv</div></div>
   <h2>Wartende Anträge</h2>
   ${S.pending.map(p=>`<div class="row"><div><b>${esc((p.first_name+" "+p.last_name).trim()||"(noch kein Name)")}</b><br><span style="color:var(--mid);font-size:14px">${esc(p.email)}${p.headline?" · "+esc(p.headline):""}</span></div>
-    <div><button class="btn sm" data-approve="${p.user_id}">Freigeben</button><button class="btn sm ghost" data-reject="${p.user_id}">Ablehnen</button></div></div>`).join("")||"<p>Keine offenen Anträge.</p>"}`;
+    <div><button class="btn sm" data-approve="${p.user_id}">Freigeben</button><button class="btn sm ghost" data-reject="${p.user_id}">Ablehnen</button></div></div>`).join("")||"<p>Keine offenen Anträge.</p>"}
+  <h2>Alle Mitglieder</h2>
+  ${(S.members||[]).map(m=>{
+    const nm=((m.first_name||"")+" "+(m.last_name||"")).trim();
+    const aktiv=m.approval==="approved"&&m.membership_active;
+    const st=aktiv?"Aktiv":m.approval==="approved"?"Freigegeben, Mitgliedschaft inaktiv":m.approval==="blocked"?"Gesperrt":m.approval==="rejected"?"Abgelehnt":"Wartet auf Freigabe";
+    const hint=aktiv&&!nm?" · ohne Namen, nicht sichtbar":"";
+    const own=m.user_id===S.session?.user?.id;
+    return `<div class="row"><div><b>${esc(nm||"(noch kein Name)")}</b><br><span style="color:var(--mid);font-size:14px">${esc(m.email)}<br>${st}${hint}</span></div>
+      <div>${own?"":(aktiv?`<button class="btn sm ghost" data-block="${m.user_id}">Sperren</button>`:`<button class="btn sm" data-approve="${m.user_id}">Freigeben</button>`)}</div></div>`}).join("")||"<p>Noch keine Mitglieder.</p>"}`;
 }
 
 function render(){
@@ -256,8 +280,9 @@ document.addEventListener("click", async e=>{
     if(error){S.err="Registrierung fehlgeschlagen: "+error.message;render()} else {go("checkemail")}
     return;
   }
+  if(t.id==="btn-edit-profile"){S.editing=true;render();return;}
   if(t.id==="btn-logout"){ await sb.auth.signOut(); S.status=null;S.me=null;S.isAdmin=false; go("login"); return; }
-  if(t.dataset.go){ go(t.dataset.go, ["net","me","mem","set"].includes(t.dataset.go)?t.dataset.go:undefined);
+  if(t.dataset.go){ if(t.dataset.go==="me") S.editing=false; go(t.dataset.go, ["net","me","mem","set"].includes(t.dataset.go)?t.dataset.go:undefined);
     if(t.dataset.go==="net"){ S.sel=null; doSearch(); }
     if(t.dataset.go==="admin"){ loadAdmin(); }
     return; }
@@ -284,11 +309,13 @@ document.addEventListener("click", async e=>{
       company:val("pf-company"),location:val("pf-location"),specialization:val("pf-spec"),
       bio:val("pf-bio"),services:val("pf-services").split(",").map(s=>s.trim()).filter(Boolean),
       contact_email:val("pf-email"),published:true};
-    const {error}=await sb.from("profiles").update(payload).eq("id",S.session.user.id);
+    const {data:upd,error:upErr}=await sb.from("profiles").update(payload).eq("id",S.session.user.id).select();
+    const error=upErr||((!upd||!upd.length)?{message:"Es wurde kein Profil aktualisiert. Bitte melde dich neu an."}:null);
     S.busy=false;
-    if(error){S.err="Konnte nicht speichern: "+error.message} else {S.msg="Profil gespeichert."; S.me={...S.me,...payload}}
+    if(error){S.err="Konnte nicht speichern: "+error.message} else {S.msg="Profil gespeichert."; S.editing=false; S.me={...S.me,...payload}}
     render(); return; }
   if(t.dataset.approve){ await sb.from("member_status").update({approval:"approved",membership_active:true}).eq("user_id",t.dataset.approve); loadAdmin(); return; }
+  if(t.dataset.block){ await sb.from("member_status").update({approval:"blocked"}).eq("user_id",t.dataset.block); loadAdmin(); return; }
   if(t.dataset.reject){ await sb.from("member_status").update({approval:"rejected"}).eq("user_id",t.dataset.reject); loadAdmin(); return; }
 });
 app.addEventListener("input", e=>{
@@ -296,8 +323,8 @@ app.addEventListener("input", e=>{
 });
 
 async function loadAdmin(){
-  const [{data:pend},{data:st}]=await Promise.all([sb.rpc("list_pending_members"), sb.rpc("admin_stats")]);
-  S.pending=pend||[]; S.stats=(st&&st[0])||{}; render();
+  const [{data:pend},{data:st},{data:all}]=await Promise.all([sb.rpc("list_pending_members"), sb.rpc("admin_stats"), sb.rpc("list_all_members")]);
+  S.pending=pend||[]; S.members=all||[]; S.stats=(st&&st[0])||{}; render();
 }
 
 sb.auth.onAuthStateChange((_e,session)=>{ S.session=session; });
