@@ -323,8 +323,10 @@ app.addEventListener("input", e=>{
 });
 
 async function loadAdmin(){
-  const [{data:pend},{data:st},{data:all}]=await Promise.all([sb.rpc("list_pending_members"), sb.rpc("admin_stats"), sb.rpc("list_all_members")]);
-  S.pending=pend||[]; S.members=all||[]; S.stats=(st&&st[0])||{}; render();
+  const [pend,st,all]=await Promise.all([sb.rpc("list_pending_members"), sb.rpc("admin_stats"), sb.rpc("list_all_members")]);
+  const firstErr=pend.error||st.error||all.error;
+  if(firstErr){ S.err="Admin-Daten konnten nicht geladen werden: "+firstErr.message; }
+  S.pending=pend.data||[]; S.members=all.data||[]; S.stats=(st.data&&st.data[0])||{}; render();
 }
 
 sb.auth.onAuthStateChange((_e,session)=>{ S.session=session; });
