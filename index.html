@@ -109,6 +109,8 @@ function screenRegister(){
   return `<button class="back" data-go="login">Zurück</button><h1>Konto erstellen</h1>
   <p>Du benötigst einen gültigen Einladungscode.</p>
   ${banner()}
+  <input id="re-first" placeholder="Vorname" autocomplete="given-name" value="${esc(S.reg?.first)}">
+  <input id="re-last" placeholder="Nachname" autocomplete="family-name" value="${esc(S.reg?.last)}">
   <input id="re-code" placeholder="Einladungscode" value="${esc(S.reg?.code)}">
   <input id="re-email" type="email" placeholder="E-Mail-Adresse" autocomplete="email" value="${esc(S.reg?.email)}">
   <input id="re-pass" type="password" placeholder="Passwort (mind. 6 Zeichen)" autocomplete="new-password">
@@ -186,7 +188,7 @@ function screenAdmin(){
   ${banner()}
   <div class="stats"><div class="stat"><b>${st.gesamt??"…"}</b>Mitglieder gesamt</div><div class="stat"><b>${st.aktiv??"…"}</b>Aktiv</div></div>
   <h2>Wartende Anträge</h2>
-  ${S.pending.map(p=>`<div class="row"><div><b>${esc(p.first_name)} ${esc(p.last_name)}</b><br><span style="color:var(--mid);font-size:14px">${esc(p.headline)}</span></div>
+  ${S.pending.map(p=>`<div class="row"><div><b>${esc((p.first_name+" "+p.last_name).trim()||"(noch kein Name)")}</b><br><span style="color:var(--mid);font-size:14px">${esc(p.email)}${p.headline?" · "+esc(p.headline):""}</span></div>
     <div><button class="btn sm" data-approve="${p.user_id}">Freigeben</button><button class="btn sm ghost" data-reject="${p.user_id}">Ablehnen</button></div></div>`).join("")||"<p>Keine offenen Anträge.</p>"}`;
 }
 
@@ -237,17 +239,19 @@ document.addEventListener("click", async e=>{
     return;
   }
   if(t.id==="btn-register"){
+    const first=document.getElementById("re-first").value.trim();
+    const last=document.getElementById("re-last").value.trim();
     const code=document.getElementById("re-code").value.trim();
     const email=document.getElementById("re-email").value.trim();
     const pass=document.getElementById("re-pass").value;
     const consent=document.getElementById("re-consent").checked;
-    S.reg={code,email,consent};
-    if(!code||!email||!pass){S.err="Bitte alle Felder ausfüllen.";render();return}
+    S.reg={first,last,code,email,consent};
+    if(!first||!last||!code||!email||!pass){S.err="Bitte alle Felder ausfüllen, auch Vor- und Nachname.";render();return}
     if(!consent){S.err="Bitte stimme der Sichtbarkeit deines Profils zu, sonst können wir dich nicht aufnehmen.";render();return}
     S.busy=true;S.err=null;render();
     const {data:ok,error:codeErr}=await sb.rpc("use_invite_code",{p_code:code});
     if(codeErr||!ok){S.busy=false;S.err="Ungültiger oder abgelaufener Einladungscode.";render();return}
-    const {error}=await sb.auth.signUp({email,password:pass,options:{data:{consent_visibility:"true",consent_version:"1"}}});
+    const {error}=await sb.auth.signUp({email,password:pass,options:{data:{first_name:first,last_name:last,consent_visibility:"true",consent_version:"1"}}});
     S.busy=false;
     if(error){S.err="Registrierung fehlgeschlagen: "+error.message;render()} else {go("checkemail")}
     return;
