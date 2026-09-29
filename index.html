@@ -87,6 +87,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const CATS=["Bildung & Nachhilfe","Handwerk & Reparaturen","Gesundheit & Wohlbefinden","Recht & Finanzen","Kinderbetreuung & Familienhilfe","Ehrenamt & Gemeinschaftsdienst","Unternehmen & Handel","Kreatives & Organisation","Sonstige Unterstützung"];
 const TWINT_LINK="https://go.twint.ch/1/e/tw?tw=acq.Z2nfDRAISKWBhPY9NHTimKOANnKUjeWpnpVrLWmvrk1PFKJaZ748ExZv4SgDDLuq";
+const CONTACT_EMAIL="info@qamarnetwork.ch";
 const S={session:null,view:"loading",tab:"net",msg:null,err:null,busy:false,
   results:[],cat:-1,loc:"",locations:[],q:"",sel:null,me:null,status:null,isAdmin:false,pending:[],members:[],stats:null,
   mfaFactors:[],mfaEnroll:null,mfaChallenge:null,loginHistory:null,magicSent:false,announcements:null};
@@ -127,7 +128,7 @@ function screenLogin(){
       <circle class="tw" cx="12%" cy="18%" r="1.6" fill="#fff"/><circle class="tw tw2" cx="34%" cy="10%" r="1.2" fill="#fff"/>
       <circle class="tw tw3" cx="56%" cy="24%" r="1.4" fill="#fff"/><circle class="tw" cx="8%" cy="62%" r="1.2" fill="#fff"/>
       <circle class="tw tw2" cx="48%" cy="78%" r="1.6" fill="#fff"/><circle class="tw tw3" cx="24%" cy="86%" r="1.2" fill="#fff"/></svg>
-    ${logo(72,"#ffffff")}<h1>Qamar Network</h1><p>Das geschlossene Netzwerk der Community: Jeder kann etwas Gutes beitragen. Zugang nur mit Einladung.</p></div>
+    ${logo(72,"#ffffff")}<h1>Qamar Network</h1><p>Das geschlossene Netzwerk der Community: Jeder kann etwas Gutes beitragen. Zugang nur mit Einladung.</p><p style="font-weight:800;letter-spacing:.02em">Investiere in dein Netzwerk.</p></div>
   ${banner()}
   <div id="login-form">
     <input id="li-email" type="email" placeholder="E-Mail-Adresse" autocomplete="email" value="${esc(S.reg?.email)}">
@@ -174,7 +175,7 @@ function screenPending(){
   <button class="btn ghost" id="btn-logout">Abmelden</button>`;
 }
 function screenLockedNoPay(){
-  return `<h1>Zugriff freischalten</h1><p>Dein Profil ist freigegeben. Es fehlt noch der Jahresbeitrag von CHF 60.–, dann schaltet Amar dich frei.</p>
+  return `<h1>Zugriff freischalten</h1><p>Dein Profil ist freigegeben. Es fehlt noch der Jahresbeitrag von CHF 60.–, dann schaltet Amar dich frei.</p><p style="font-weight:800">Investiere in dein Netzwerk.</p>
   ${banner()}
   <a class="btn" href="${TWINT_LINK}" target="_blank" rel="noopener">Jetzt mit TWINT bezahlen</a>
   <p style="font-size:13px">Nach der Zahlung prüft Amar den Eingang von Hand und schaltet dich anschliessend frei.</p>
@@ -266,6 +267,7 @@ function screenMem(){
   const active=S.status?.approval==='approved'&&S.status?.membership_active;
   return `<h1>Mitgliedschaft</h1><p>Status: <b>${active?"Aktiv":S.status?.approval==='pending'?"Warten auf Freigabe":"Nicht aktiv"}</b></p>
   <p>Jahresbeitrag: <b>CHF 60.–</b></p>
+  <p style="font-weight:800">Investiere in dein Netzwerk.</p>
   ${banner()}
   <a class="btn" href="${TWINT_LINK}" target="_blank" rel="noopener">Jetzt mit TWINT bezahlen</a>
   <div class="banner">Nach der Zahlung prüft Amar den Zahlungseingang von Hand und schaltet dein Konto frei bzw. verlängert deine Mitgliedschaft. Das kann etwas Zeit in Anspruch nehmen.</div>
@@ -292,6 +294,11 @@ function screenSet(){
     <button class="btn ghost" id="btn-mfa-cancel">Abbrechen</button>`
    : totp?`<p>Zwei-Faktor-Anmeldung ist <b>aktiv</b>.</p><button class="btn danger" data-mfa-unenroll="${totp.id}">Deaktivieren</button>`
    : `<p>Schützt dein Konto zusätzlich mit einem Code aus einer Authenticator-App.</p><button class="btn" id="btn-mfa-enable">Aktivieren</button>`}
+
+  <h2>Jemanden empfehlen</h2>
+  <p style="font-size:13px">Kennst du jemanden, der gut ins Netzwerk passen würde? Schlage die Person direkt Amar vor — er meldet sich persönlich und lädt sie bei Bedarf ein.</p>
+  <a class="btn" href="mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Empfehlung fürs Qamar Network")}&body=${encodeURIComponent("Hallo Amar\n\nIch möchte dir gerne jemanden fürs Qamar Network empfehlen:\n\nName: \nKontakt (E-Mail/Telefon): \nWarum passt die Person gut rein: \n\nViele Grüsse")}">Jemanden empfehlen</a>
+  <p style="font-size:12px;color:var(--mid);margin-top:6px">Öffnet eine E-Mail an ${esc(CONTACT_EMAIL)}.</p>
 
   <h2>Meine Daten</h2>
   <button class="btn ghost" id="btn-export-data">Meine Daten herunterladen</button>
