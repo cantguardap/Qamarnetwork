@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -90,18 +91,24 @@ const S={session:null,view:"loading",tab:"net",msg:null,err:null,busy:false,
 
 const app=document.getElementById("app"), navEl=document.getElementById("nav");
 
-// ---- Logo: Mondsichel mit Sternen ----
-let _lg=0;
-function star(x,y,r,cls){return `<path class="tw ${cls||""}" transform="translate(${x} ${y}) scale(${r/6})" d="M0,-6 L1.6,-1.6 L6,0 L1.6,1.6 L0,6 L-1.6,1.6 L-6,0 L-1.6,-1.6Z" fill="currentColor"/>`}
+// ---- Logo: Netzwerk-Mond mit einem hervorgehobenen Knotenpunkt ----
 function logo(size,color){
-  const id="mk"+(++_lg);
-  return `<svg width="${size}" height="${size}" viewBox="0 0 120 120" aria-hidden="true" style="color:#fff;flex:none">
-  <defs><mask id="${id}"><rect width="120" height="120" fill="#fff"/><circle cx="74" cy="46" r="34" fill="#000"/></mask></defs>
-  <circle cx="52" cy="62" r="38" fill="${color||"#00A2FF"}" mask="url(#${id})"/>
-  ${star(92,30,9,"")}${star(104,64,5,"tw2")}${star(78,88,4,"tw3")}</svg>`;
+  const c=color||"currentColor";
+  return `<svg width="${size}" height="${size}" viewBox="0 0 120 120" aria-hidden="true" style="flex:none">
+  <path d="M66 16 A44 44 0 1 0 66 104 A34 34 0 1 1 66 16 Z" fill="none" stroke="${c}" stroke-width="4"/>
+  <line x1="66" y1="16" x2="96" y2="30" stroke="${c}" stroke-width="2" opacity="0.35"/>
+  <line x1="96" y1="30" x2="104" y2="60" stroke="${c}" stroke-width="2" opacity="0.35"/>
+  <line x1="104" y1="60" x2="96" y2="90" stroke="${c}" stroke-width="2" opacity="0.35"/>
+  <line x1="96" y1="90" x2="66" y2="104" stroke="${c}" stroke-width="2" opacity="0.35"/>
+  <circle cx="66" cy="16" r="4" fill="${c}"/>
+  <circle cx="96" cy="30" r="4" fill="${c}"/>
+  <circle cx="104" cy="60" r="10" fill="#00A2FF"/>
+  <circle cx="96" cy="90" r="4" fill="${c}"/>
+  <circle cx="66" cy="104" r="4" fill="${c}"/>
+  </svg>`;
 }
 function brandBar(){return `<div class="brandbar">${logo(30)}<span>Qamar Network</span></div>`}
-(function(){const svg=logo(64).replace(/currentColor/g,"#00A2FF");
+(function(){const svg=logo(64,"#0B1F33");
   const l=document.createElement("link");l.rel="icon";l.href="data:image/svg+xml,"+encodeURIComponent(svg);document.head.appendChild(l);})();
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const ini=(a,b)=>((a||"?")[0]+(b||"")[0]).toUpperCase();
@@ -118,7 +125,7 @@ function screenLogin(){
       <circle class="tw" cx="12%" cy="18%" r="1.6" fill="#fff"/><circle class="tw tw2" cx="34%" cy="10%" r="1.2" fill="#fff"/>
       <circle class="tw tw3" cx="56%" cy="24%" r="1.4" fill="#fff"/><circle class="tw" cx="8%" cy="62%" r="1.2" fill="#fff"/>
       <circle class="tw tw2" cx="48%" cy="78%" r="1.6" fill="#fff"/><circle class="tw tw3" cx="24%" cy="86%" r="1.2" fill="#fff"/></svg>
-    ${logo(72)}<h1>Qamar Network</h1><p>Das geschlossene Netzwerk der Community: Jeder kann etwas Gutes beitragen. Zugang nur mit Einladung.</p></div>
+    ${logo(72,"#ffffff")}<h1>Qamar Network</h1><p>Das geschlossene Netzwerk der Community: Jeder kann etwas Gutes beitragen. Zugang nur mit Einladung.</p></div>
   ${banner()}
   <div id="login-form">
     <input id="li-email" type="email" placeholder="E-Mail-Adresse" autocomplete="email" value="${esc(S.reg?.email)}">
@@ -165,7 +172,7 @@ function screenPending(){
   <button class="btn ghost" id="btn-logout">Abmelden</button>`;
 }
 function screenLockedNoPay(){
-  return `<h1>Fast am Ziel</h1><p>Dein Profil ist freigegeben. Es fehlt noch der Jahresbeitrag von CHF 20.–, dann schaltet Amar dich frei.</p>
+  return `<h1>Zugriff freischalten</h1><p>Dein Profil ist freigegeben. Es fehlt noch der Mitgliedsbeitrag von CHF 5.–/Monat oder CHF 50.–/Jahr, dann schaltet Amar dich frei.</p>
   ${banner()}
   <a class="btn" href="${TWINT_LINK}" target="_blank" rel="noopener">Jetzt mit TWINT bezahlen</a>
   <p style="font-size:13px">Nach der Zahlung prüft Amar den Eingang von Hand und schaltet dich anschliessend frei.</p>
@@ -256,7 +263,8 @@ function screenNews(){
 function screenMem(){
   const active=S.status?.approval==='approved'&&S.status?.membership_active;
   return `<h1>Mitgliedschaft</h1><p>Status: <b>${active?"Aktiv":S.status?.approval==='pending'?"Warten auf Freigabe":"Nicht aktiv"}</b></p>
-  <p>Jahresbeitrag: <b>CHF 20.–</b></p>
+  <p>Mitgliedsbeitrag: <b>CHF 5.–/Monat</b> oder <b>CHF 50.–/Jahr</b></p>
+  <p style="font-size:13px;color:#5a6472;margin-top:-8px">Bitte gib beim TWINT-Zahlungsvermerk an, ob es sich um die Monats- oder Jahreszahlung handelt.</p>
   ${banner()}
   <a class="btn" href="${TWINT_LINK}" target="_blank" rel="noopener">Jetzt mit TWINT bezahlen</a>
   <div class="banner">Nach der Zahlung prüft Amar den Zahlungseingang von Hand und schaltet dein Konto frei bzw. verlängert deine Mitgliedschaft. Das kann etwas Zeit in Anspruch nehmen.</div>
