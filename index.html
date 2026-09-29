@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="icon-192.svg">
+<link rel="icon" type="image/svg+xml" href="icon-192.svg">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
@@ -172,7 +173,7 @@ function screenPending(){
   <button class="btn ghost" id="btn-logout">Abmelden</button>`;
 }
 function screenLockedNoPay(){
-  return `<h1>Zugriff freischalten</h1><p>Dein Profil ist freigegeben. Es fehlt noch der Mitgliedsbeitrag von CHF 5.–/Monat oder CHF 50.–/Jahr, dann schaltet Amar dich frei.</p>
+  return `<h1>Zugriff freischalten</h1><p>Dein Profil ist freigegeben. Es fehlt noch der Jahresbeitrag von CHF 60.–, dann schaltet Amar dich frei.</p>
   ${banner()}
   <a class="btn" href="${TWINT_LINK}" target="_blank" rel="noopener">Jetzt mit TWINT bezahlen</a>
   <p style="font-size:13px">Nach der Zahlung prüft Amar den Eingang von Hand und schaltet dich anschliessend frei.</p>
@@ -263,8 +264,7 @@ function screenNews(){
 function screenMem(){
   const active=S.status?.approval==='approved'&&S.status?.membership_active;
   return `<h1>Mitgliedschaft</h1><p>Status: <b>${active?"Aktiv":S.status?.approval==='pending'?"Warten auf Freigabe":"Nicht aktiv"}</b></p>
-  <p>Mitgliedsbeitrag: <b>CHF 5.–/Monat</b> oder <b>CHF 50.–/Jahr</b></p>
-  <p style="font-size:13px;color:#5a6472;margin-top:-8px">Bitte gib beim TWINT-Zahlungsvermerk an, ob es sich um die Monats- oder Jahreszahlung handelt.</p>
+  <p>Jahresbeitrag: <b>CHF 60.–</b></p>
   ${banner()}
   <a class="btn" href="${TWINT_LINK}" target="_blank" rel="noopener">Jetzt mit TWINT bezahlen</a>
   <div class="banner">Nach der Zahlung prüft Amar den Zahlungseingang von Hand und schaltet dein Konto frei bzw. verlängert deine Mitgliedschaft. Das kann etwas Zeit in Anspruch nehmen.</div>
