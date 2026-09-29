@@ -528,7 +528,7 @@ document.addEventListener("click", async e=>{
     S.busy=true;render();
     const {data,error}=await sb.rpc("get_member",{p_id:t.dataset.sel});
     S.busy=false;
-    if(error||!data||!data.length){S.err="Profil nicht verfügbar.";render();return}
+    if(error||!data||!data.length){S.err="Profil nicht verfügbar. Die Liste wurde aktualisiert.";render();doSearch();return}
     S.sel=data[0]; render(); return; }
   if(t.dataset.back!==undefined){ S.sel=null; render(); return; }
   if(t.id==="btn-reveal"){
