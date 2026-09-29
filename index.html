@@ -1,1 +1,642 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Qamar Network</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#00A2FF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.svg">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root{--bg:#FFFFFF;--soft:#F5F6F8;--ink:#000000;--mid:#333333;--acc:#00A2FF;--line:#E3E6EA;--onacc:#FFFFFF;--err:#D6423C;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0B0C0E;--soft:#17191D;--ink:#FFFFFF;--mid:#C9CDD3;--line:#2A2D33}}
+:root[data-theme="dark"]{--bg:#0B0C0E;--soft:#17191D;--ink:#FFFFFF;--mid:#C9CDD3;--line:#2A2D33}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
+#app{max-width:520px;margin:0 auto;padding:20px 18px 96px;min-height:100vh}
+h1{font-size:26px;line-height:1.2;margin:8px 0 6px;font-weight:800;letter-spacing:-.02em}
+h2{font-size:18px;margin:22px 0 10px;font-weight:800}
+p{color:var(--mid);margin:0 0 12px}
+.banner{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;color:var(--mid);margin-bottom:14px}
+.err{background:#FDECEC;border:1px solid var(--err);color:var(--err);border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:10px}
+.ok{background:#E9F8EE;border:1px solid #2FA84F;color:#1E7A3A;border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:10px}
+input,select,textarea{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;margin-bottom:10px}
+textarea{min-height:90px}
+button{font:inherit;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.btn{display:block;width:100%;text-align:center;background:var(--acc);color:var(--onacc);border:0;border-radius:10px;padding:14px;font-weight:800;text-decoration:none;margin:10px 0}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:transparent;color:var(--err);border:1px solid var(--err)}
+.btn.sm{display:inline-block;width:auto;padding:8px 14px;margin:0 6px 6px 0;font-size:14px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px}
+.chip{flex:none;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:8px 14px;font-size:14px}
+.chip.on{background:var(--acc);border-color:var(--acc);color:var(--onacc);font-weight:600}
+.cats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.catbox{flex:none;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:14px;display:flex;align-items:center;gap:6px;cursor:pointer}
+.catbox input{width:auto;margin:0}
+.checkline{display:flex;gap:8px;align-items:flex-start;color:var(--mid);font-size:14px;margin-bottom:14px}
+.checkline input{width:auto;margin:3px 0 0}
+.card{display:flex;gap:14px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px;background:var(--bg);width:100%;text-align:left;color:var(--ink)}
+.av{flex:none;width:52px;height:52px;border-radius:50%;background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;font-weight:800;color:var(--acc);overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover}
+.av.big{width:84px;height:84px;font-size:26px}
+.card b{display:block}.card span{font-size:14px;color:var(--mid)}
+.tag{display:inline-block;background:var(--soft);border-radius:8px;padding:4px 10px;font-size:13px;margin:0 6px 6px 0;color:var(--mid)}
+.badge{display:inline-block;background:var(--acc);color:var(--onacc);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:800;margin-left:6px;vertical-align:middle}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav div{max-width:520px;margin:0 auto;display:flex}
+nav button{flex:1;background:none;border:0;padding:14px 4px;font-size:13px;color:var(--mid)}
+nav button.on{color:var(--acc);font-weight:800}
+.row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);gap:10px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--soft);border-radius:12px;padding:14px}.stat b{font-size:24px;display:block}
+.back{background:none;border:0;color:var(--acc);padding:0;font-weight:600;margin-bottom:8px}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:s .7s linear infinite;vertical-align:-3px;margin-right:8px}
+@keyframes s{to{transform:rotate(360deg)}}
+.hero{position:relative;overflow:hidden;border-radius:18px;padding:26px 22px 22px;margin-bottom:18px;background:linear-gradient(160deg,#0B1F33 0%,#0F3A5F 60%,#00A2FF 140%);color:#fff}
+.hero h1{color:#fff;margin:14px 0 6px}.hero p{color:#D6E9F7;margin:0}
+.hero .stars{position:absolute;inset:0;pointer-events:none}
+.tw{animation:tw 3.2s ease-in-out infinite}.tw2{animation-delay:1.1s}.tw3{animation-delay:2.1s}
+@keyframes tw{0%,100%{opacity:.35}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.tw{animation:none;opacity:.8}}
+.brandbar{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.01em;margin:2px 0 14px}
+.legal{white-space:pre-wrap;font-size:14px;color:var(--mid)}
+.qr{background:#fff;padding:14px;border-radius:12px;display:inline-block;margin:10px 0}
+.qr img{display:block;width:180px;height:180px}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:var(--soft);border-radius:8px;padding:8px 10px;word-break:break-all;margin-bottom:10px}
+</style>
+</head>
+<body>
+<div id="app"><div class="banner">Lädt …</div></div>
+<nav id="nav" hidden><div></div></nav>
+<script>
+// ---- Verbindung zu Supabase ----
+const SUPABASE_URL = "https://imqlclsxqgyuhphjrefu.supabase.co";
+const SUPABASE_KEY = "sb_publishable_DOUkpNolnd6B7XoLvBvVdA_3rozmeVJ";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+const CATS=["Bildung & Nachhilfe","Handwerk & Reparaturen","Gesundheit & Wohlbefinden","Recht & Finanzen","Kinderbetreuung & Familienhilfe","Ehrenamt & Gemeinschaftsdienst","Unternehmen & Handel","Kreatives & Organisation","Sonstige Unterstützung"];
+const TWINT_LINK="https://go.twint.ch/1/e/tw?tw=acq.Z2nfDRAISKWBhPY9NHTimKOANnKUjeWpnpVrLWmvrk1PFKJaZ748ExZv4SgDDLuq";
+const S={session:null,view:"loading",tab:"net",msg:null,err:null,busy:false,
+  results:[],cat:-1,loc:"",locations:[],q:"",sel:null,me:null,status:null,isAdmin:false,pending:[],members:[],stats:null,
+  mfaFactors:[],mfaEnroll:null,mfaChallenge:null,loginHistory:null,magicSent:false,announcements:null};
+
+const app=document.getElementById("app"), navEl=document.getElementById("nav");
+
+// ---- Logo: Mondsichel mit Sternen ----
+let _lg=0;
+function star(x,y,r,cls){return `<path class="tw ${cls||""}" transform="translate(${x} ${y}) scale(${r/6})" d="M0,-6 L1.6,-1.6 L6,0 L1.6,1.6 L0,6 L-1.6,1.6 L-6,0 L-1.6,-1.6Z" fill="currentColor"/>`}
+function logo(size,color){
+  const id="mk"+(++_lg);
+  return `<svg width="${size}" height="${size}" viewBox="0 0 120 120" aria-hidden="true" style="color:#fff;flex:none">
+  <defs><mask id="${id}"><rect width="120" height="120" fill="#fff"/><circle cx="74" cy="46" r="34" fill="#000"/></mask></defs>
+  <circle cx="52" cy="62" r="38" fill="${color||"#00A2FF"}" mask="url(#${id})"/>
+  ${star(92,30,9,"")}${star(104,64,5,"tw2")}${star(78,88,4,"tw3")}</svg>`;
+}
+function brandBar(){return `<div class="brandbar">${logo(30)}<span>Qamar Network</span></div>`}
+(function(){const svg=logo(64).replace(/currentColor/g,"#00A2FF");
+  const l=document.createElement("link");l.rel="icon";l.href="data:image/svg+xml,"+encodeURIComponent(svg);document.head.appendChild(l);})();
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ini=(a,b)=>((a||"?")[0]+(b||"")[0]).toUpperCase();
+const avatar=(m,big)=>m.photo_path?`<div class="av${big?" big":""}"><img src="${esc(m.photo_path)}" alt=""></div>`:`<div class="av${big?" big":""}">${ini(m.first_name,m.last_name)}</div>`;
+const isNew=d=>d && (Date.now()-new Date(d).getTime()) < 14*24*3600*1000;
+const fmtDate=d=>{try{return new Date(d).toLocaleString("de-CH",{dateStyle:"medium",timeStyle:"short"})}catch(e){return d}};
+
+function go(v,tab){S.view=v;if(tab)S.tab=tab;S.err=null;S.msg=null;render();window.scrollTo(0,0)}
+function banner(){return S.err?`<div class="err">${esc(S.err)}</div>`:S.msg?`<div class="ok">${esc(S.msg)}</div>`:""}
+
+// ---------- Bildschirme ----------
+function screenLogin(){
+  return `<div class="hero"><svg class="stars" width="100%" height="100%" aria-hidden="true">
+      <circle class="tw" cx="12%" cy="18%" r="1.6" fill="#fff"/><circle class="tw tw2" cx="34%" cy="10%" r="1.2" fill="#fff"/>
+      <circle class="tw tw3" cx="56%" cy="24%" r="1.4" fill="#fff"/><circle class="tw" cx="8%" cy="62%" r="1.2" fill="#fff"/>
+      <circle class="tw tw2" cx="48%" cy="78%" r="1.6" fill="#fff"/><circle class="tw tw3" cx="24%" cy="86%" r="1.2" fill="#fff"/></svg>
+    ${logo(72)}<h1>Qamar Network</h1><p>Das geschlossene Netzwerk der Community: Jeder kann etwas Gutes beitragen. Zugang nur mit Einladung.</p></div>
+  ${banner()}
+  <div id="login-form">
+    <input id="li-email" type="email" placeholder="E-Mail-Adresse" autocomplete="email" value="${esc(S.reg?.email)}">
+    <input id="li-pass" type="password" placeholder="Passwort" autocomplete="current-password">
+    <button class="btn" id="btn-login" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':''}Anmelden</button>
+    <button class="btn ghost" id="btn-magic" ${S.busy?"disabled":""}>Stattdessen Login-Link per E-Mail erhalten</button>
+    <button class="btn ghost" data-go="register">Noch kein Konto? Registrieren</button>
+  </div>
+  <p style="font-size:12px;margin-top:18px">
+    <a href="#" data-go="legalPrivacy" style="color:var(--mid)">Datenschutz</a> ·
+    <a href="#" data-go="legalImprint" style="color:var(--mid)">Impressum</a> ·
+    <a href="#" data-go="legalTerms" style="color:var(--mid)">Nutzungsbedingungen</a></p>`;
+}
+function screenMfaVerify(){
+  return `<h1>Sicherheitscode</h1><p>Gib den 6-stelligen Code aus deiner Authenticator-App ein.</p>
+  ${banner()}
+  <input id="mfa-code" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" maxlength="6">
+  <button class="btn" id="btn-mfa-verify" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':''}Bestätigen</button>
+  <button class="btn ghost" id="btn-mfa-cancel-login">Abbrechen</button>`;
+}
+function screenRegister(){
+  return `<button class="back" data-go="login">Zurück</button><h1>Konto erstellen</h1>
+  <p>Du benötigst einen gültigen Einladungscode.</p>
+  ${banner()}
+  <input id="re-first" placeholder="Vorname" autocomplete="given-name" value="${esc(S.reg?.first)}">
+  <input id="re-last" placeholder="Nachname" autocomplete="family-name" value="${esc(S.reg?.last)}">
+  <input id="re-code" placeholder="Einladungscode" value="${esc(S.reg?.code)}">
+  <input id="re-email" type="email" placeholder="E-Mail-Adresse" autocomplete="email" value="${esc(S.reg?.email)}">
+  <input id="re-pass" type="password" placeholder="Passwort (mind. 6 Zeichen)" autocomplete="new-password">
+  <label class="checkline">
+    <input id="re-consent" type="checkbox" ${S.reg?.consent?"checked":""}>
+    Ich stimme zu, dass mein Profil nach der Freigabe für alle aktiven Mitglieder sichtbar ist. Mir ist bewusst, dass daraus Rückschlüsse auf meine Zugehörigkeit zur Community möglich sind. Ich kann mein Konto jederzeit löschen lassen.</label>
+  <button class="btn" id="btn-register" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':''}Registrieren</button>
+  <p style="font-size:13px">Nach der Registrierung bestätigst du deine E-Mail-Adresse über den Link, den wir dir zuschicken.</p>`;
+}
+function screenCheckEmail(){
+  return `<h1>Fast geschafft</h1><p>Wir haben dir eine Bestätigungs-E-Mail geschickt. Bitte klicke auf den Link darin und melde dich danach hier an.</p>
+  <button class="btn" data-go="login">Zur Anmeldung</button>`;
+}
+function screenPending(){
+  return `<h1>Antrag eingegangen</h1><p>Dein Konto wurde erstellt. Amar prüft neue Mitglieder persönlich und schaltet dich frei, sobald dein Profil bereit ist.</p>
+  <p>Du kannst schon jetzt dein Profil ausfüllen — es wird erst nach der Freigabe für andere sichtbar.</p>
+  <button class="btn" data-go="me">Profil ausfüllen</button>
+  <button class="btn ghost" id="btn-logout">Abmelden</button>`;
+}
+function screenLockedNoPay(){
+  return `<h1>Fast am Ziel</h1><p>Dein Profil ist freigegeben. Es fehlt noch der Jahresbeitrag von CHF 20.–, dann schaltet Amar dich frei.</p>
+  ${banner()}
+  <a class="btn" href="${TWINT_LINK}" target="_blank" rel="noopener">Jetzt mit TWINT bezahlen</a>
+  <p style="font-size:13px">Nach der Zahlung prüft Amar den Eingang von Hand und schaltet dich anschliessend frei.</p>
+  <p style="font-size:13px;margin-top:18px">Hast du einen Gutscheincode?</p>
+  <input id="voucher-code" placeholder="Gutscheincode" style="text-transform:uppercase">
+  <button class="btn ghost" id="btn-voucher" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':''}Einlösen</button>
+  <button class="btn ghost" id="btn-logout">Abmelden</button>`;
+}
+function catTags(ids){return (ids||[]).map(i=>CATS[i-1]).filter(Boolean).map(c=>`<span class="tag">${esc(c)}</span>`).join("")}
+function screenNet(){
+  if(S.sel) return detail();
+  const r=S.results;
+  return `<h1>Willkommen in deinem Netzwerk</h1><p>Finde Menschen, die ihre Fähigkeiten für andere einsetzen, und du kannst deine eigenen anbieten.</p>
+  ${banner()}
+  <input id="q" type="search" placeholder="Name oder Angebot suchen" value="${esc(S.q)}">
+  <select id="loc-filter"><option value="">Alle Standorte</option>${S.locations.map(l=>`<option value="${esc(l)}" ${S.loc===l?"selected":""}>${esc(l)}</option>`).join("")}</select>
+  <div class="chips"><button class="chip ${S.cat<0?"on":""}" data-cat="-1">Alle</button>${CATS.map((c,i)=>`<button class="chip ${S.cat===i+1?"on":""}" data-cat="${i+1}">${c}</button>`).join("")}</div>
+  <h2>${S.busy?"Suche läuft …":r.length+" "+(r.length===1?"Mitglied":"Mitglieder")}</h2>
+  ${r.map(m=>`<button class="card" data-sel="${m.id}">${avatar(m)}<div><b>${esc(m.first_name)} ${esc(m.last_name)}${isNew(m.joined_at)?'<span class="badge">Neu</span>':''}</b><span>${esc(m.headline)}${m.company?", "+esc(m.company):""}<br>${esc(m.location)}</span></div></button>`).join("")||(S.busy?"":(S.q||S.cat>=0||S.loc?"<p>Keine Treffer. Ändere die Suche oder den Bereich.</p>":"<p>Noch keine anderen Mitglieder sichtbar. Sichtbar sind Mitglieder, die freigegeben sind und einen Namen im Profil haben. Dich selbst siehst du hier nicht.</p>"))}`;
+}
+function detail(){
+  const m=S.sel;
+  return `<button class="back" data-back>Zurück zur Liste</button>
+  ${avatar(m,true)}<h1>${esc(m.first_name)} ${esc(m.last_name)}</h1><p>${esc(m.headline)}${m.company?", "+esc(m.company):""} ${m.location?"in "+esc(m.location):""}</p>
+  ${catTags(m.profession_ids)}
+  ${banner()}
+  <button class="btn" id="btn-reveal">Per E-Mail kontaktieren</button>
+  ${m.bio?`<h2>Über mich</h2><p>${esc(m.bio)}</p>`:""}
+  ${m.services&&m.services.length?`<h2>Dienstleistungen</h2>${m.services.map(x=>`<span class="tag">${esc(x)}</span>`).join("")}`:""}
+  ${m.specialization?`<h2>Spezialisierung</h2><p>${esc(m.specialization)}</p>`:""}`;
+}
+function viewMe(p){
+  return `<h1>Mein Profil</h1>${banner()}
+  ${avatar(p,true)}
+  <h1>${esc(p.first_name)} ${esc(p.last_name)}</h1>
+  <p>${esc(p.headline)}${p.company?", "+esc(p.company):""}${p.location?" in "+esc(p.location):""}</p>
+  ${catTags(p.profession_ids)}
+  ${p.bio?`<h2>Über mich</h2><p>${esc(p.bio)}</p>`:""}
+  ${p.services&&p.services.length?`<h2>Dienstleistungen</h2>${p.services.map(x=>`<span class="tag">${esc(x)}</span>`).join("")}`:""}
+  ${p.specialization?`<h2>Spezialisierung</h2><p>${esc(p.specialization)}</p>`:""}
+  ${p.contact_email?`<h2>Kontakt</h2><p>${esc(p.contact_email)}</p>`:""}
+  <p style="font-size:13px">So sehen dich andere aktive Mitglieder im Netzwerk. Dein Profil wurde ${p.views_count||0}× angesehen.</p>
+  <button class="btn" id="btn-edit-profile">Profil bearbeiten</button>`;
+}
+function screenMe(){
+  const p=S.me||{};
+  if((p.first_name||p.last_name)&&!S.editing) return viewMe(p);
+  const ids=p.profession_ids||(p.profession_id?[p.profession_id]:[]);
+  return `<h1>Mein Profil</h1><p>Jeder kann etwas gut, ob aus dem Beruf, dem Hobby oder dem Alltag. Zeig, wie du der Community helfen kannst.</p>
+  ${banner()}
+  ${avatar(p,true)}
+  <input id="pf-photo" type="file" accept="image/*" style="margin-top:10px">
+  <input id="pf-first" placeholder="Vorname" value="${esc(p.first_name)}">
+  <input id="pf-last" placeholder="Nachname" value="${esc(p.last_name)}">
+  <input id="pf-headline" placeholder="Was bietest du an? (z. B. Urologe, Nachhilfe, Übersetzen)" value="${esc(p.headline)}">
+  <p style="font-size:13px;margin-bottom:6px">Bereiche (mehrere möglich)</p>
+  <div class="cats">${CATS.map((c,i)=>`<label class="catbox"><input type="checkbox" value="${i+1}" ${ids.includes(i+1)?"checked":""} data-pf-cat>${c}</label>`).join("")}</div>
+  <input id="pf-company" placeholder="Unternehmen / Projekt (optional)" value="${esc(p.company)}">
+  <label class="checkline"><input id="pf-show-company" type="checkbox" ${p.show_company!==false?"checked":""}> Unternehmen/Projekt öffentlich anzeigen</label>
+  <input id="pf-location" placeholder="Standort" value="${esc(p.location)}">
+  <input id="pf-spec" placeholder="Spezialisierung" value="${esc(p.specialization)}">
+  <textarea id="pf-bio" placeholder="Erzähl, wie du der Community helfen kannst">${esc(p.bio)}</textarea>
+  <input id="pf-services" placeholder="Dienstleistungen, mit Komma getrennt" value="${esc((p.services||[]).join(", "))}">
+  <input id="pf-email" type="email" placeholder="Berufliche E-Mail-Adresse" value="${esc(p.contact_email)}">
+  <p style="font-size:13px">Dein Profil ist nach der Freigabe für alle aktiven Mitglieder sichtbar.</p>
+  <button class="btn" id="btn-save-profile" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':''}Profil speichern</button>`;
+}
+function fmtEvent(d){try{return new Date(d).toLocaleString("de-CH",{dateStyle:"full",timeStyle:"short"})}catch(e){return d}}
+function screenNews(){
+  const a=S.announcements;
+  return `<h1>Neuigkeiten</h1><p>Mitteilungen und Termine von Amar für die ganze Community.</p>
+  ${banner()}
+  ${S.isAdmin?`<h2>Neue Mitteilung</h2>
+    <input id="an-title" placeholder="Titel">
+    <textarea id="an-body" placeholder="Text der Mitteilung"></textarea>
+    <input id="an-event" type="datetime-local" placeholder="Termin (optional)">
+    <label class="checkline"><input id="an-pin" type="checkbox"> Oben anheften</label>
+    <button class="btn" id="btn-post-news" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':''}Veröffentlichen</button>
+    <hr style="border:0;border-top:1px solid var(--line);margin:20px 0">`:""}
+  ${a===null?"<p>Lädt …</p>":(a.length?a.map(x=>`<div class="row" style="display:block">
+      <b>${x.pinned?"📌 ":""}${esc(x.title)}</b>
+      ${x.event_at?`<div style="font-size:13px;color:var(--acc);font-weight:600">${esc(fmtEvent(x.event_at))}</div>`:""}
+      ${x.body?`<p style="margin:6px 0 4px">${esc(x.body)}</p>`:""}
+      <span style="font-size:12px;color:var(--mid)">${esc(fmtDate(x.created_at))}</span>
+      ${S.isAdmin?`<div><button class="btn sm ghost" data-del-news="${x.id}">Löschen</button></div>`:""}
+    </div>`).join(""):"<p>Noch keine Mitteilungen.</p>")}`;
+}
+function screenMem(){
+  const active=S.status?.approval==='approved'&&S.status?.membership_active;
+  return `<h1>Mitgliedschaft</h1><p>Status: <b>${active?"Aktiv":S.status?.approval==='pending'?"Warten auf Freigabe":"Nicht aktiv"}</b></p>
+  <p>Jahresbeitrag: <b>CHF 20.–</b></p>
+  ${banner()}
+  <a class="btn" href="${TWINT_LINK}" target="_blank" rel="noopener">Jetzt mit TWINT bezahlen</a>
+  <div class="banner">Nach der Zahlung prüft Amar den Zahlungseingang von Hand und schaltet dein Konto frei bzw. verlängert deine Mitgliedschaft. Das kann etwas Zeit in Anspruch nehmen.</div>
+  <p style="font-size:13px;margin-top:18px">Hast du einen Gutscheincode?</p>
+  <input id="voucher-code" placeholder="Gutscheincode" style="text-transform:uppercase">
+  <button class="btn ghost" id="btn-voucher" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':''}Einlösen</button>`;
+}
+function screenSet(){
+  const totp=(S.mfaFactors||[]).find(f=>f.status==="verified");
+  return `<h1>Einstellungen</h1>
+  <div class="row"><span>Angemeldet als</span><span style="font-size:14px">${esc(S.session?.user?.email)}</span></div>
+  ${S.isAdmin?`<button class="btn" data-go="admin">Admin-Bereich öffnen</button>`:""}
+  <button class="btn ghost" id="btn-logout" style="margin-top:16px">Abmelden</button>
+
+  <h2>Zwei-Faktor-Anmeldung</h2>
+  ${banner()}
+  ${S.mfaEnroll?`
+    <p>Scanne diesen Code mit einer Authenticator-App (z. B. Google Authenticator, Authy):</p>
+    <div class="qr"><img src="${S.mfaEnroll.qr}" alt="QR-Code"></div>
+    <p style="font-size:13px">Geht das Scannen nicht? Gib diesen Schlüssel manuell ein:</p>
+    <div class="mono">${esc(S.mfaEnroll.secret)}</div>
+    <input id="mfa-enroll-code" inputmode="numeric" placeholder="6-stelligen Code eingeben" maxlength="6">
+    <button class="btn" id="btn-mfa-confirm" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':''}Aktivieren</button>
+    <button class="btn ghost" id="btn-mfa-cancel">Abbrechen</button>`
+   : totp?`<p>Zwei-Faktor-Anmeldung ist <b>aktiv</b>.</p><button class="btn danger" data-mfa-unenroll="${totp.id}">Deaktivieren</button>`
+   : `<p>Schützt dein Konto zusätzlich mit einem Code aus einer Authenticator-App.</p><button class="btn" id="btn-mfa-enable">Aktivieren</button>`}
+
+  <h2>Meine Daten</h2>
+  <button class="btn ghost" id="btn-export-data">Meine Daten herunterladen</button>
+  <button class="btn ghost" data-go="loginHistory">Anmeldeverlauf ansehen</button>
+  <button class="btn ghost" data-go="dataAccess">Wer hat Zugriff auf meine Daten?</button>
+
+  <p style="font-size:13px;margin-top:24px"><a href="#" data-go="legalPrivacy">Datenschutz</a> · <a href="#" data-go="legalImprint">Impressum</a> · <a href="#" data-go="legalTerms">Nutzungsbedingungen</a></p>
+
+  <h2 style="margin-top:28px;color:var(--err)">Konto löschen</h2>
+  <p style="font-size:13px">Dein Profil wird sofort aus dem Netzwerk entfernt und alle Angaben werden gelöscht. Der Login-Zugang wird danach ebenfalls entfernt.</p>
+  ${S.confirmDelete?`<p style="font-size:14px;font-weight:600">Bist du sicher? Das kann nicht rückgängig gemacht werden.</p>
+    <button class="btn danger" id="btn-delete-confirm" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':''}Ja, Konto endgültig löschen</button>
+    <button class="btn ghost" id="btn-delete-cancel">Abbrechen</button>`
+   :`<button class="btn danger" id="btn-delete-account">Konto löschen</button>`}`;
+}
+function screenLoginHistory(){
+  const h=S.loginHistory;
+  return `<button class="back" data-go="set">Zurück</button><h1>Anmeldeverlauf</h1>
+  <p>Die letzten Anmeldungen an deinem Konto. War etwas nicht du? Melde dich bei Amar und ändere dein Passwort.</p>
+  ${h===null?"<p>Lädt …</p>":(h.length?h.map(x=>`<div class="row"><span>${esc(fmtDate(x.created_at))}</span><span style="font-size:12px;color:var(--mid);max-width:55%;text-align:right">${esc(x.user_agent).slice(0,60)}</span></div>`).join(""):"<p>Noch keine Einträge.</p>")}`;
+}
+function screenDataAccess(){
+  return `<button class="back" data-go="set">Zurück</button><h1>Wer hat Zugriff auf meine Daten?</h1>
+  <p>Deine vollständigen Profildaten kann nur Amar als Betreiber einsehen (zur Prüfung neuer Mitglieder). Andere aktive Mitglieder sehen ausschliesslich das, was du selbst in deinem Profil veröffentlichst.</p>
+  <p>Deine E-Mail-Adresse wird anderen Mitgliedern nie direkt angezeigt — sie wird erst beim Klick auf "Per E-Mail kontaktieren" einmalig abgerufen, und diese Abrufe sind zusätzlich begrenzt, um automatisiertes Auslesen zu verhindern.</p>
+  <p>Es gibt keine Nachrichtenfunktion innerhalb der App, kein Tracking und keine Weitergabe deiner Daten an Dritte ausser den technischen Dienstleistern, die den Betrieb der App ermöglichen (siehe Datenschutzerklärung).</p>
+  <button class="btn ghost" data-go="legalPrivacy">Zur Datenschutzerklärung</button>`;
+}
+function legalPage(title,text){
+  return `<button class="back" data-go="set">Zurück</button><h1>${esc(title)}</h1><div class="legal">${esc(text)}</div>`;
+}
+const LEGAL_PRIVACY=`Datenschutzerklärung Qamar Network
+
+Verantwortlich für die Datenbearbeitung ist der Betreiber von Qamar Network (Kontakt: siehe Impressum).
+
+Wir bearbeiten folgende Daten: Vor- und Nachname, E-Mail-Adresse, sowie die von dir freiwillig im Profil angegebenen Informationen (z. B. Angebot, Standort, Kategorie, Foto). Diese Angaben werden nach Freigabe deines Kontos für andere aktive Mitglieder im geschlossenen Netzwerk sichtbar.
+
+Die Mitgliedschaft in diesem Netzwerk kann Rückschlüsse auf deine Zugehörigkeit zur muslimischen Community zulassen. Diese Angabe gilt nach Schweizer Recht als besonders schützenswerte Personendaten. Wir bearbeiten sie nur mit deiner ausdrücklichen Einwilligung bei der Registrierung.
+
+Deine Daten werden bei Supabase (Datenbank-Hosting) gespeichert und bei Vercel (Web-Hosting) ausgeliefert. Beide Anbieter werden als Auftragsbearbeiter eingesetzt. Wir verwenden kein Analyse- oder Tracking-Tool und geben keine Daten an Werbenetzwerke weiter.
+
+Du kannst jederzeit die Löschung deines Kontos verlangen (in den Einstellungen oder per E-Mail) und deine Daten jederzeit als Datei herunterladen (Einstellungen -> "Meine Daten herunterladen"). Nach der Löschung werden deine Profildaten sofort entfernt.
+
+Für Fragen zum Datenschutz wende dich an die im Impressum genannte Kontaktadresse.
+
+(Diese Erklärung ist ein Entwurf und sollte vor dem offiziellen Start durch den Betreiber ergänzt bzw. rechtlich geprüft werden.)`;
+const LEGAL_IMPRINT=`Impressum
+
+[Bitte ergänzen: Vollständiger Name / Firmenname]
+[Bitte ergänzen: Adresse]
+[Bitte ergänzen: E-Mail-Adresse]
+
+Verantwortlich für den Inhalt dieser App: siehe oben.
+
+(Dieses Impressum ist ein Platzhalter und muss vor dem offiziellen Start mit den vollständigen Angaben des Betreibers ausgefüllt werden.)`;
+const LEGAL_TERMS=`Nutzungsbedingungen Qamar Network
+
+1. Qamar Network ist ein geschlossenes, einladungsbasiertes Verzeichnis für die Community. Der Zugang erfolgt ausschliesslich über einen gültigen Einladungscode und nach persönlicher Prüfung durch den Betreiber.
+
+2. Mitglieder verpflichten sich, wahrheitsgemässe Angaben zu machen und andere Mitglieder respektvoll zu behandeln.
+
+3. Der Kontakt zwischen Mitgliedern erfolgt ausschliesslich per E-Mail (mailto-Link). Es findet keine Nachrichtenfunktion innerhalb der App statt.
+
+4. Der Betreiber kann Konten bei Missbrauch sperren oder Anträge ablehnen.
+
+5. Die Mitgliedschaft kann jederzeit vom Mitglied selbst gekündigt werden (Konto löschen in den Einstellungen).
+
+6. Es besteht kein Anspruch auf Aufnahme in das Netzwerk.
+
+(Dieser Text ist ein Entwurf und sollte vor dem offiziellen Start rechtlich geprüft werden.)`;
+function screenAdmin(){
+  const st=S.stats||{};
+  return `<button class="back" data-go="set">Zurück</button><h1>Administration</h1>
+  ${banner()}
+  <div class="stats"><div class="stat"><b>${st.gesamt??"…"}</b>Mitglieder gesamt</div><div class="stat"><b>${st.aktiv??"…"}</b>Aktiv</div></div>
+  <h2>Wartende Anträge</h2>
+  ${S.pending.map(p=>`<div class="row"><div><b>${esc((p.first_name+" "+p.last_name).trim()||"(noch kein Name)")}</b><br><span style="color:var(--mid);font-size:14px">${esc(p.email)}${p.headline?" · "+esc(p.headline):""}</span></div>
+    <div><button class="btn sm" data-approve="${p.user_id}">Freigeben</button><button class="btn sm ghost" data-reject="${p.user_id}">Ablehnen</button></div></div>`).join("")||"<p>Keine offenen Anträge.</p>"}
+  <h2>Alle Mitglieder</h2>
+  ${(S.members||[]).map(m=>{
+    const nm=((m.first_name||"")+" "+(m.last_name||"")).trim();
+    const aktiv=m.approval==="approved"&&m.membership_active;
+    const st=aktiv?"Aktiv":m.approval==="approved"?"Freigegeben, Mitgliedschaft inaktiv":m.approval==="blocked"?"Gesperrt":m.approval==="rejected"?"Abgelehnt":m.approval==="deleted"?"Konto gelöscht":"Wartet auf Freigabe";
+    const hint=aktiv&&!nm?" · ohne Namen, nicht sichtbar":"";
+    const own=m.user_id===S.session?.user?.id;
+    return `<div class="row"><div><b>${esc(nm||"(noch kein Name)")}</b><br><span style="color:var(--mid);font-size:14px">${esc(m.email)}<br>${st}${hint}</span></div>
+      <div>${own||m.approval==="deleted"?"":(aktiv?`<button class="btn sm ghost" data-block="${m.user_id}">Sperren</button>`:`<button class="btn sm" data-approve="${m.user_id}">Freigeben</button>`)}</div></div>`}).join("")||"<p>Noch keine Mitglieder.</p>"}`;
+}
+
+function render(){
+  const scr={loading:()=>'<div class="banner">Lädt …</div>',login:screenLogin,mfaVerify:screenMfaVerify,register:screenRegister,
+    checkemail:screenCheckEmail,pending:screenPending,lockedNoPay:screenLockedNoPay,
+    net:screenNet,news:screenNews,me:screenMe,mem:screenMem,set:screenSet,admin:screenAdmin,
+    loginHistory:screenLoginHistory,dataAccess:screenDataAccess,
+    legalPrivacy:()=>legalPage("Datenschutz",LEGAL_PRIVACY),legalImprint:()=>legalPage("Impressum",LEGAL_IMPRINT),legalTerms:()=>legalPage("Nutzungsbedingungen",LEGAL_TERMS)};
+  const showNav=["net","news","me","mem","set"].includes(S.view);
+  const tabs=[["net","Netzwerk"],["news","Neuigkeiten"],["me","Mein Profil"],["mem","Mitgliedschaft"],["set","Einstellungen"]];
+  app.innerHTML=(showNav?brandBar():"")+(scr[S.view]||screenLogin)();
+  navEl.hidden=!showNav;
+  if(showNav) navEl.firstElementChild.innerHTML=tabs.map(t=>`<button class="${S.tab===t[0]?"on":""}" data-go="${t[0]}">${t[1]}</button>`).join("");
+}
+
+// ---------- Datenfluss ----------
+async function loadAfterLogin(){
+  S.session=(await sb.auth.getSession()).data.session;
+  if(!S.session){go("login");return}
+  const [{data:ms}, {data:pf}, {data:adm}] = await Promise.all([
+    sb.from("member_status").select("*").eq("user_id",S.session.user.id).maybeSingle(),
+    sb.from("profiles").select("*").eq("id",S.session.user.id).maybeSingle(),
+    sb.rpc("am_i_admin")
+  ]);
+  S.status=ms; S.me=pf; S.isAdmin=!!adm;
+  if(ms && ms.approval==='approved' && ms.membership_active){ go("net","net"); doSearch(); loadLocations(); }
+  else if(ms && ms.approval==='pending'){ go("pending"); }
+  else { go("lockedNoPay"); }
+}
+async function loadLocations(){
+  const {data,error}=await sb.rpc("list_locations");
+  if(!error) S.locations=(data||[]).map(r=>r.location);
+}
+async function loadNews(){
+  S.announcements=null; render();
+  const {data,error}=await sb.from("announcements").select("*").order("pinned",{ascending:false}).order("created_at",{ascending:false});
+  S.announcements=error?[]:data;
+  if(error) S.err="Konnte Neuigkeiten nicht laden: "+error.message;
+  render();
+}
+async function loadMfaFactors(){
+  const {data,error}=await sb.auth.mfa.listFactors();
+  if(!error) S.mfaFactors=data?.totp||[];
+  render();
+}
+async function loadLoginHistory(){
+  S.loginHistory=null; render();
+  const {data,error}=await sb.from("login_history").select("*").eq("user_id",S.session.user.id).order("created_at",{ascending:false}).limit(15);
+  S.loginHistory=error?[]:data;
+  render();
+}
+async function doSearch(){
+  S.busy=true; render();
+  const {data,error}=await sb.rpc("search_members",{p_q:S.q,p_profession:S.cat<0?null:S.cat,p_location:S.loc});
+  S.busy=false;
+  if(error){S.err=error.message} else {S.results=data||[]}
+  render();
+}
+let searchTimer;
+function scheduleSearch(){clearTimeout(searchTimer);searchTimer=setTimeout(doSearch,300)}
+
+async function afterPasswordSignIn(){
+  const {data:aal}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  if(aal && aal.nextLevel==="aal2" && aal.nextLevel!==aal.currentLevel){
+    const {data:factors}=await sb.auth.mfa.listFactors();
+    const factor=(factors?.totp||[])[0];
+    if(factor){
+      const {data:ch,error:chErr}=await sb.auth.mfa.challenge({factorId:factor.id});
+      if(chErr){S.err=chErr.message;render();return}
+      S.mfaChallenge={factorId:factor.id,challengeId:ch.id};
+      go("mfaVerify");
+      return;
+    }
+  }
+  await loadAfterLogin();
+}
+
+document.addEventListener("click", async e=>{
+  const t=e.target;
+  if(t.id==="btn-login"){
+    const email=document.getElementById("li-email").value.trim();
+    const pass=document.getElementById("li-pass").value;
+    S.busy=true;S.err=null;render();
+    const {error}=await sb.auth.signInWithPassword({email,password:pass});
+    S.busy=false;
+    if(error){S.err="Anmeldung fehlgeschlagen: "+error.message;render()} else {await afterPasswordSignIn()}
+    return;
+  }
+  if(t.id==="btn-magic"){
+    const email=document.getElementById("li-email").value.trim();
+    if(!email){S.err="Bitte zuerst deine E-Mail-Adresse eingeben.";render();return}
+    S.reg={...S.reg,email}; S.busy=true;S.err=null;render();
+    const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin}});
+    S.busy=false;
+    if(error){S.err="Login-Link konnte nicht gesendet werden: "+error.message} else {S.msg="Login-Link gesendet. Bitte prüfe dein Postfach und klicke auf den Link."}
+    render(); return;
+  }
+  if(t.id==="btn-mfa-verify"){
+    const code=document.getElementById("mfa-code").value.trim();
+    S.busy=true;S.err=null;render();
+    const {error}=await sb.auth.mfa.verify({factorId:S.mfaChallenge.factorId,challengeId:S.mfaChallenge.challengeId,code});
+    S.busy=false;
+    if(error){S.err="Code ungültig: "+error.message;render();return}
+    await loadAfterLogin(); return;
+  }
+  if(t.id==="btn-mfa-cancel-login"){ await sb.auth.signOut(); go("login"); return; }
+  if(t.id==="btn-register"){
+    const first=document.getElementById("re-first").value.trim();
+    const last=document.getElementById("re-last").value.trim();
+    const code=document.getElementById("re-code").value.trim();
+    const email=document.getElementById("re-email").value.trim();
+    const pass=document.getElementById("re-pass").value;
+    const consent=document.getElementById("re-consent").checked;
+    S.reg={first,last,code,email,consent};
+    if(!first||!last||!code||!email||!pass){S.err="Bitte alle Felder ausfüllen, auch Vor- und Nachname.";render();return}
+    if(!consent){S.err="Bitte stimme der Sichtbarkeit deines Profils zu, sonst können wir dich nicht aufnehmen.";render();return}
+    S.busy=true;S.err=null;render();
+    const {data:ok,error:codeErr}=await sb.rpc("use_invite_code",{p_code:code});
+    if(codeErr||!ok){S.busy=false;S.err="Ungültiger oder abgelaufener Einladungscode.";render();return}
+    const {error}=await sb.auth.signUp({email,password:pass,options:{data:{first_name:first,last_name:last,consent_visibility:"true",consent_version:"1"}}});
+    S.busy=false;
+    if(error){S.err="Registrierung fehlgeschlagen: "+error.message;render()} else {go("checkemail")}
+    return;
+  }
+  if(t.id==="btn-edit-profile"){S.editing=true;render();return;}
+  if(t.id==="btn-logout"){ await sb.auth.signOut(); S.status=null;S.me=null;S.isAdmin=false; go("login"); return; }
+  if(t.dataset.go){
+    if(t.dataset.go==="me") S.editing=false;
+    if(t.dataset.go==="set"){ S.confirmDelete=false; S.mfaEnroll=null; loadMfaFactors(); }
+    if(t.dataset.go==="loginHistory") loadLoginHistory();
+    go(t.dataset.go, ["net","news","me","mem","set"].includes(t.dataset.go)?t.dataset.go:undefined);
+    if(t.dataset.go==="net"){ S.sel=null; doSearch(); loadLocations(); }
+    if(t.dataset.go==="news"){ loadNews(); }
+    if(t.dataset.go==="admin"){ loadAdmin(); }
+    return; }
+  if(t.dataset.cat!==undefined){ S.cat=+t.dataset.cat; doSearch(); return; }
+  if(t.dataset.sel){ const m=S.results.find(x=>x.id===t.dataset.sel);
+    S.busy=true;render();
+    const {data,error}=await sb.rpc("get_member",{p_id:t.dataset.sel});
+    S.busy=false;
+    if(error||!data||!data.length){S.err="Profil nicht verfügbar.";render();return}
+    S.sel=data[0]; render(); return; }
+  if(t.dataset.back!==undefined){ S.sel=null; render(); return; }
+  if(t.id==="btn-reveal"){
+    S.busy=true;render();
+    const {data,error}=await sb.rpc("get_member_email",{p_id:S.sel.id});
+    S.busy=false;
+    if(error||!data){S.err="E-Mail-Adresse nicht verfügbar.";render();return}
+    location.href="mailto:"+data+"?subject="+encodeURIComponent("Kontaktanfrage über Qamar Network");
+    return; }
+  if(t.id==="btn-save-profile"){
+    const val=id=>document.getElementById(id).value.trim();
+    const catIds=[...document.querySelectorAll("[data-pf-cat]:checked")].map(x=>+x.value);
+    const photoFile=document.getElementById("pf-photo").files[0];
+    const payload={first_name:val("pf-first"),last_name:val("pf-last"),headline:val("pf-headline"),
+      profession_id:catIds[0]||null, profession_ids:catIds,
+      company:val("pf-company"), show_company:document.getElementById("pf-show-company").checked,
+      location:val("pf-location"),specialization:val("pf-spec"),
+      bio:val("pf-bio"),services:val("pf-services").split(",").map(s=>s.trim()).filter(Boolean),
+      contact_email:val("pf-email"),published:true};
+    S.busy=true;S.err=null;render();
+    if(photoFile){
+      const ext=(photoFile.name.split(".").pop()||"jpg").toLowerCase();
+      const path=S.session.user.id+"/photo."+ext;
+      const {error:upErr2}=await sb.storage.from("avatars").upload(path,photoFile,{upsert:true});
+      if(upErr2){S.busy=false;S.err="Foto konnte nicht hochgeladen werden: "+upErr2.message;render();return}
+      const {data:pub}=sb.storage.from("avatars").getPublicUrl(path);
+      payload.photo_path=pub.publicUrl+"?t="+Date.now();
+    }
+    const {data:upd,error:upErr}=await sb.from("profiles").update(payload).eq("id",S.session.user.id).select();
+    const error=upErr||((!upd||!upd.length)?{message:"Es wurde kein Profil aktualisiert. Bitte melde dich neu an."}:null);
+    S.busy=false;
+    if(error){S.err="Konnte nicht speichern: "+error.message} else {S.msg="Profil gespeichert."; S.editing=false; S.me={...S.me,...payload}}
+    render(); return; }
+  if(t.id==="btn-export-data"){
+    const payload={profil:S.me,mitgliedschaft:S.status,konto:{email:S.session.user.email,erstellt:S.session.user.created_at}};
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download="qamar-network-meine-daten.json"; document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    return; }
+  if(t.id==="btn-mfa-enable"){
+    S.busy=true;S.err=null;render();
+    const {data,error}=await sb.auth.mfa.enroll({factorType:"totp"});
+    S.busy=false;
+    if(error){S.err="Konnte nicht aktiviert werden: "+error.message;render();return}
+    S.mfaEnroll={id:data.id,qr:data.totp.qr_code,secret:data.totp.secret};
+    render(); return; }
+  if(t.id==="btn-mfa-cancel"){
+    if(S.mfaEnroll) await sb.auth.mfa.unenroll({factorId:S.mfaEnroll.id});
+    S.mfaEnroll=null; render(); return; }
+  if(t.id==="btn-mfa-confirm"){
+    const code=document.getElementById("mfa-enroll-code").value.trim();
+    S.busy=true;S.err=null;render();
+    const {data:ch,error:chErr}=await sb.auth.mfa.challenge({factorId:S.mfaEnroll.id});
+    if(chErr){S.busy=false;S.err=chErr.message;render();return}
+    const {error:vErr}=await sb.auth.mfa.verify({factorId:S.mfaEnroll.id,challengeId:ch.id,code});
+    S.busy=false;
+    if(vErr){S.err="Code ungültig: "+vErr.message;render();return}
+    S.mfaEnroll=null; S.msg="Zwei-Faktor-Anmeldung aktiviert."; loadMfaFactors(); return; }
+  if(t.dataset.mfaUnenroll){
+    S.busy=true;render();
+    const {error}=await sb.auth.mfa.unenroll({factorId:t.dataset.mfaUnenroll});
+    S.busy=false;
+    if(error){S.err=error.message;render();return}
+    S.msg="Zwei-Faktor-Anmeldung deaktiviert."; loadMfaFactors(); return; }
+  if(t.id==="btn-delete-account"){ S.confirmDelete=true; render(); return; }
+  if(t.id==="btn-delete-cancel"){ S.confirmDelete=false; render(); return; }
+  if(t.id==="btn-delete-confirm"){
+    S.busy=true;render();
+    const {error}=await sb.rpc("request_account_deletion");
+    S.busy=false;
+    if(error){S.err="Konto konnte nicht gelöscht werden: "+error.message;render();return}
+    await sb.auth.signOut();
+    S.status=null;S.me=null;S.isAdmin=false;S.confirmDelete=false;
+    go("login"); S.msg="Dein Konto wurde gelöscht.";render();
+    return; }
+  if(t.id==="btn-post-news"){
+    const title=document.getElementById("an-title").value.trim();
+    const body=document.getElementById("an-body").value.trim();
+    const eventVal=document.getElementById("an-event").value;
+    const pinned=document.getElementById("an-pin").checked;
+    if(!title){S.err="Bitte einen Titel eingeben.";render();return}
+    S.busy=true;S.err=null;render();
+    const {error}=await sb.from("announcements").insert({title,body,pinned,
+      event_at:eventVal?new Date(eventVal).toISOString():null, created_by:S.session.user.id});
+    S.busy=false;
+    if(error){S.err="Konnte nicht veröffentlicht werden: "+error.message;render();return}
+    S.msg="Mitteilung veröffentlicht."; loadNews(); return; }
+  if(t.dataset.delNews){
+    await sb.from("announcements").delete().eq("id",t.dataset.delNews); loadNews(); return; }
+  if(t.id==="btn-voucher"){
+    const code=document.getElementById("voucher-code").value.trim().toUpperCase();
+    if(!code){S.err="Bitte einen Gutscheincode eingeben.";render();return}
+    S.busy=true;S.err=null;render();
+    const {data:ok,error}=await sb.rpc("redeem_discount_code",{p_code:code});
+    S.busy=false;
+    if(error||!ok){S.err="Ungültiger oder abgelaufener Gutscheincode.";render();return}
+    S.msg="Gutschein eingelöst! Dein Konto ist jetzt freigeschaltet.";
+    await loadAfterLogin(); S.msg="Gutschein eingelöst! Dein Konto ist jetzt freigeschaltet."; render();
+    return; }
+  if(t.dataset.approve){ await sb.from("member_status").update({approval:"approved",membership_active:true}).eq("user_id",t.dataset.approve); loadAdmin(); return; }
+  if(t.dataset.block){ await sb.from("member_status").update({approval:"blocked"}).eq("user_id",t.dataset.block); loadAdmin(); return; }
+  if(t.dataset.reject){ await sb.from("member_status").update({approval:"rejected"}).eq("user_id",t.dataset.reject); loadAdmin(); return; }
+});
+app.addEventListener("input", e=>{
+  if(e.target.id==="q"){ S.q=e.target.value; scheduleSearch(); }
+});
+app.addEventListener("change", e=>{
+  if(e.target.id==="loc-filter"){ S.loc=e.target.value; doSearch(); }
+});
+
+async function loadAdmin(){
+  const [pend,st,all]=await Promise.all([sb.rpc("list_pending_members"), sb.rpc("admin_stats"), sb.rpc("list_all_members")]);
+  const firstErr=pend.error||st.error||all.error;
+  if(firstErr){ S.err="Admin-Daten konnten nicht geladen werden: "+firstErr.message; }
+  S.pending=pend.data||[]; S.members=all.data||[]; S.stats=(st.data&&st.data[0])||{}; render();
+}
+
+sb.auth.onAuthStateChange((event,session)=>{
+  S.session=session;
+  if(event==="SIGNED_IN" && session){
+    sb.from("login_history").insert({user_id:session.user.id,user_agent:navigator.userAgent}).then(()=>{});
+  }
+});
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }
+loadAfterLogin();
+</script>
+</body>
+</html>
