@@ -54,8 +54,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{ou
 .badge{display:inline-block;background:var(--acc);color:var(--onacc);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:800;margin-left:6px;vertical-align:middle}
 nav{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
 nav div{max-width:520px;margin:0 auto;display:flex}
-nav button{flex:1;background:none;border:0;padding:14px 4px;font-size:13px;color:var(--mid)}
+nav button{flex:1;background:none;border:0;padding:8px 4px 10px;font-size:12px;color:var(--mid);display:flex;flex-direction:column;align-items:center;gap:2px}
 nav button.on{color:var(--acc);font-weight:800}
+nav .tabicon{font-size:19px;line-height:1}
 .row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);gap:10px}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .stat{background:var(--soft);border-radius:12px;padding:14px}.stat b{font-size:24px;display:block}
@@ -244,7 +245,7 @@ function screenMe(){
 function fmtEvent(d){try{return new Date(d).toLocaleString("de-CH",{dateStyle:"full",timeStyle:"short"})}catch(e){return d}}
 function screenNews(){
   const a=S.announcements;
-  return `<h1>Neuigkeiten</h1><p>Mitteilungen und Termine von Amar für die ganze Community.</p>
+  return `<h1>Mitteilungen</h1><p>Mitteilungen und Termine für die ganze Community.</p>
   ${banner()}
   ${S.isAdmin?`<h2>Neue Mitteilung</h2>
     <input id="an-title" placeholder="Titel">
@@ -387,10 +388,10 @@ function render(){
     loginHistory:screenLoginHistory,dataAccess:screenDataAccess,
     legalPrivacy:()=>legalPage("Datenschutz",LEGAL_PRIVACY),legalImprint:()=>legalPage("Impressum",LEGAL_IMPRINT),legalTerms:()=>legalPage("Nutzungsbedingungen",LEGAL_TERMS)};
   const showNav=["net","news","me","mem","set"].includes(S.view);
-  const tabs=[["net","Netzwerk"],["news","Neuigkeiten"],["me","Mein Profil"],["mem","Mitgliedschaft"],["set","Einstellungen"]];
+  const tabs=[["net","🕸️","Netzwerk"],["news","🔔","Mitteilungen"],["me","👤","Mein Profil"],["mem","💳","Mitgliedschaft"],["set","⚙️","Einstellungen"]];
   app.innerHTML=(showNav?brandBar():"")+(scr[S.view]||screenLogin)();
   navEl.hidden=!showNav;
-  if(showNav) navEl.firstElementChild.innerHTML=tabs.map(t=>`<button class="${S.tab===t[0]?"on":""}" data-go="${t[0]}">${t[1]}</button>`).join("");
+  if(showNav) navEl.firstElementChild.innerHTML=tabs.map(t=>`<button class="${S.tab===t[0]?"on":""}" data-go="${t[0]}"><span class="tabicon" aria-hidden="true">${t[1]}</span>${t[2]}</button>`).join("");
 }
 
 // ---------- Datenfluss ----------
@@ -415,7 +416,7 @@ async function loadNews(){
   S.announcements=null; render();
   const {data,error}=await sb.from("announcements").select("*").order("pinned",{ascending:false}).order("created_at",{ascending:false});
   S.announcements=error?[]:data;
-  if(error) S.err="Konnte Neuigkeiten nicht laden: "+error.message;
+  if(error) S.err="Konnte Mitteilungen nicht laden: "+error.message;
   render();
 }
 async function loadMfaFactors(){
