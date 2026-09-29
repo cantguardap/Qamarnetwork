@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -181,6 +182,7 @@ function screenLockedNoPay(){
   <p style="font-size:13px;margin-top:18px">Hast du einen Gutscheincode?</p>
   <input id="voucher-code" placeholder="Gutscheincode" style="text-transform:uppercase">
   <button class="btn ghost" id="btn-voucher" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':''}Einlösen</button>
+  <p style="font-size:12px;color:var(--mid)">Ein Gutschein befreit dich vom Jahresbeitrag. Dein Konto wird trotzdem noch von uns geprüft und danach freigeschaltet.</p>
   <button class="btn ghost" id="btn-logout">Abmelden</button>`;
 }
 function catTags(ids){return (ids||[]).map(i=>CATS[i-1]).filter(Boolean).map(c=>`<span class="tag">${esc(c)}</span>`).join("")}
@@ -272,7 +274,8 @@ function screenMem(){
   <div class="banner">Nach der Zahlung prüfen wir den Zahlungseingang von Hand und schalten dein Konto frei bzw. verlängern deine Mitgliedschaft. Das kann etwas Zeit in Anspruch nehmen.</div>
   <p style="font-size:13px;margin-top:18px">Hast du einen Gutscheincode?</p>
   <input id="voucher-code" placeholder="Gutscheincode" style="text-transform:uppercase">
-  <button class="btn ghost" id="btn-voucher" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':''}Einlösen</button>`;
+  <button class="btn ghost" id="btn-voucher" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':''}Einlösen</button>
+  <p style="font-size:12px;color:var(--mid)">Ein Gutschein befreit dich vom Jahresbeitrag. Dein Konto wird trotzdem noch von uns geprüft und danach freigeschaltet.</p>`;
 }
 function screenSet(){
   const totp=(S.mfaFactors||[]).find(f=>f.status==="verified");
@@ -623,8 +626,9 @@ document.addEventListener("click", async e=>{
     const {data:ok,error}=await sb.rpc("redeem_discount_code",{p_code:code});
     S.busy=false;
     if(error||!ok){S.err="Ungültiger oder abgelaufener Gutscheincode.";render();return}
-    S.msg="Gutschein eingelöst! Dein Konto ist jetzt freigeschaltet.";
-    await loadAfterLogin(); S.msg="Gutschein eingelöst! Dein Konto ist jetzt freigeschaltet."; render();
+    await loadAfterLogin();
+    S.msg="Gutschein eingelöst. Dein Beitrag entfällt – dein Konto wird trotzdem noch von uns geprüft, bevor es freigeschaltet wird.";
+    render();
     return; }
   if(t.dataset.approve){ await sb.from("member_status").update({approval:"approved",membership_active:true}).eq("user_id",t.dataset.approve); loadAdmin(); return; }
   if(t.dataset.block){ await sb.from("member_status").update({approval:"blocked"}).eq("user_id",t.dataset.block); loadAdmin(); return; }
