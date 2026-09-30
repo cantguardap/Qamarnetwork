@@ -89,14 +89,19 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const CATS=["Bildung & Nachhilfe","Handwerk & Reparaturen","Gesundheit & Wohlbefinden","Recht & Finanzen","Kinderbetreuung & Familienhilfe","Ehrenamt & Gemeinschaftsdienst","Unternehmen & Handel","Kreatives & Organisation","Sonstige Unterstützung"];
 const TWINT_LINK="https://go.twint.ch/1/e/tw?tw=acq.Z2nfDRAISKWBhPY9NHTimKOANnKUjeWpnpVrLWmvrk1PFKJaZ748ExZv4SgDDLuq";
 const CONTACT_EMAIL="info@qamarnetwork.ch";
-const S={session:null,view:"loading",tab:"net",msg:null,err:null,busy:false,
+const S={session:null,view:"loading",tab:"net",msg:null,err:null,busy:false,inRecovery:false,
   results:[],cat:-1,loc:"",locations:[],q:"",sel:null,me:null,status:null,isAdmin:false,pending:[],members:[],stats:null,
   mfaFactors:[],mfaEnroll:null,mfaChallenge:null,loginHistory:null,magicSent:false,announcements:null};
 
 // Einladungslink: ?code=XYZ in der URL füllt den Einladungscode automatisch vor.
+// Passwort-Reset-Link: erkennt type=recovery, damit loadAfterLogin() den
+// "Neues Passwort setzen"-Bildschirm nicht sofort wieder überschreibt.
 (function(){
   const inviteCode=new URLSearchParams(location.search).get("code");
   if(inviteCode) S.reg={code:inviteCode};
+  if(location.hash.includes("type=recovery") || new URLSearchParams(location.search).get("type")==="recovery"){
+    S.inRecovery=true;
+  }
 })();
 
 const app=document.getElementById("app"), navEl=document.getElementById("nav");
@@ -439,6 +444,7 @@ function render(){
 
 // ---------- Datenfluss ----------
 async function loadAfterLogin(){
+  if(S.inRecovery){return} // Passwort-Reset läuft: Bildschirm nicht überschreiben
   S.session=(await sb.auth.getSession()).data.session;
   if(!S.session){go(S.reg?.code?"register":"login");return}
   const [{data:ms}, {data:pf}, {data:adm}] = await Promise.all([
@@ -694,6 +700,7 @@ document.addEventListener("click", async e=>{
     const {error}=await sb.auth.updateUser({password:pass});
     S.busy=false;
     if(error){S.err="Konnte nicht gespeichert werden: "+error.message;render();return}
+    S.inRecovery=false;
     S.msg="Passwort gespeichert. Du bist jetzt angemeldet.";
     await loadAfterLogin(); return; }
   if(t.dataset.block){ await sb.from("member_status").update({approval:"blocked"}).eq("user_id",t.dataset.block); loadAdmin(); return; }
