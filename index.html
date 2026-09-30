@@ -75,6 +75,11 @@ nav .tabicon{font-size:19px;line-height:1}
 .qr{background:#fff;padding:14px;border-radius:12px;display:inline-block;margin:10px 0}
 .qr img{display:block;width:180px;height:180px}
 .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:var(--soft);border-radius:8px;padding:8px 10px;word-break:break-all;margin-bottom:10px}
+.cropbox{margin:10px 0}
+.cropview{width:240px;height:240px;max-width:100%;border-radius:50%;overflow:hidden;position:relative;background:var(--soft);border:1px solid var(--line);margin:0 auto 12px;touch-action:none;cursor:grab}
+.cropview img{position:absolute;left:0;top:0;transform-origin:0 0;user-select:none;-webkit-user-drag:none}
+.cropctrls{display:flex;align-items:center;gap:10px;max-width:240px;margin:0 auto 12px}
+.cropctrls input[type=range]{margin:0}
 </style>
 </head>
 <body>
@@ -91,7 +96,9 @@ const TWINT_LINK="https://go.twint.ch/1/e/tw?tw=acq.Z2nfDRAISKWBhPY9NHTimKOANnKU
 const CONTACT_EMAIL="info@qamarnetwork.ch";
 const S={session:null,view:"loading",tab:"net",msg:null,err:null,busy:false,inRecovery:false,
   results:[],cat:-1,loc:"",locations:[],q:"",sel:null,me:null,status:null,isAdmin:false,pending:[],members:[],stats:null,
-  mfaFactors:[],mfaEnroll:null,mfaChallenge:null,loginHistory:null,magicSent:false,announcements:null};
+  mfaFactors:[],mfaEnroll:null,mfaChallenge:null,loginHistory:null,magicSent:false,announcements:null,
+  cropSrc:null,cropNaturalW:0,cropNaturalH:0,pendingPhotoBlob:null,pendingPhotoPreview:null};
+const crop={scale:1,zoom:1,baseScale:1,offX:0,offY:0}; // laufende Crop-Werte, ausserhalb von S (kein Re-Render nötig beim Ziehen/Zoomen)
 
 // Einladungslink: ?code=XYZ in der URL füllt den Einladungscode automatisch vor.
 // Passwort-Reset-Link: erkennt type=recovery, damit loadAfterLogin() den
@@ -257,8 +264,17 @@ function screenMe(){
   const ids=p.profession_ids||(p.profession_id?[p.profession_id]:[]);
   return `<h1>Mein Profil</h1><p>Jeder kann etwas gut, ob aus dem Beruf, dem Hobby oder dem Alltag. Zeig, wie du der Community helfen kannst.</p>
   ${banner()}
-  ${avatar(p,true)}
-  <input id="pf-photo" type="file" accept="image/*" style="margin-top:10px">
+  ${S.cropSrc?`<div class="cropbox">
+      <div class="cropview" id="crop-view"><img id="crop-img" src="${S.cropSrc}" alt=""></div>
+      <div class="cropctrls">🔍<input type="range" id="crop-zoom" min="1" max="3" step="0.01" value="${crop.zoom}"></div>
+      <div style="display:flex;gap:8px;max-width:240px;margin:0 auto">
+        <button class="btn sm" id="btn-crop-confirm" type="button">Übernehmen</button>
+        <button class="btn sm ghost" id="btn-crop-cancel" type="button">Abbrechen</button>
+      </div>
+      <p style="font-size:12px;text-align:center">Zum Verschieben ziehen, mit dem Regler zoomen.</p>
+    </div>`
+   :`${S.pendingPhotoPreview?`<div class="av big"><img src="${S.pendingPhotoPreview}" alt=""></div>`:avatar(p,true)}
+    <input id="pf-photo" type="file" accept="image/*" style="margin-top:10px">`}
   <input id="pf-first" placeholder="Vorname" value="${esc(p.first_name)}">
   <input id="pf-last" placeholder="Nachname" value="${esc(p.last_name)}">
   <input id="pf-headline" placeholder="Was bietest du an? (z. B. Urologe, Nachhilfe, Übersetzen)" value="${esc(p.headline)}">
@@ -428,6 +444,49 @@ function screenAdmin(){
       <div>${own||m.approval==="deleted"?"":(aktiv?`<button class="btn sm ghost" data-block="${m.user_id}">Sperren</button>`:`<button class="btn sm" data-approve="${m.user_id}">Freigeben</button>`)}</div></div>`}).join("")||"<p>Noch keine Mitglieder.</p>"}`;
 }
 
+const CROP_VP=240; // Grösse des runden Ausschnitts in CSS-Pixeln (siehe .cropview)
+function cropApplyTransform(imgEl){
+  crop.scale=crop.baseScale*crop.zoom;
+  const dw=S.cropNaturalW*crop.scale, dh=S.cropNaturalH*crop.scale;
+  crop.offX=Math.min(0,Math.max(CROP_VP-dw,crop.offX));
+  crop.offY=Math.min(0,Math.max(CROP_VP-dh,crop.offY));
+  imgEl.style.width=dw+"px"; imgEl.style.height=dh+"px";
+  imgEl.style.transform=`translate(${crop.offX}px,${crop.offY}px)`;
+}
+function bindCropper(){
+  const view=document.getElementById("crop-view"), img=document.getElementById("crop-img"), zoom=document.getElementById("crop-zoom");
+  if(!view||!img) return;
+  crop.baseScale=CROP_VP/Math.min(S.cropNaturalW,S.cropNaturalH);
+  crop.scale=crop.baseScale*crop.zoom;
+  crop.offX=(CROP_VP-S.cropNaturalW*crop.scale)/2;
+  crop.offY=(CROP_VP-S.cropNaturalH*crop.scale)/2;
+  cropApplyTransform(img);
+  let dragging=false,startX=0,startY=0,startOffX=0,startOffY=0;
+  view.onpointerdown=e=>{dragging=true;startX=e.clientX;startY=e.clientY;startOffX=crop.offX;startOffY=crop.offY;view.setPointerCapture(e.pointerId);view.style.cursor="grabbing";};
+  view.onpointermove=e=>{
+    if(!dragging) return;
+    crop.offX=startOffX+(e.clientX-startX); crop.offY=startOffY+(e.clientY-startY);
+    cropApplyTransform(img);
+  };
+  const endDrag=()=>{dragging=false;view.style.cursor="grab";};
+  view.onpointerup=endDrag; view.onpointercancel=endDrag;
+  if(zoom) zoom.oninput=()=>{ crop.zoom=+zoom.value; cropApplyTransform(img); };
+}
+function cropConfirm(){
+  const out=document.createElement("canvas");
+  const OUT=480; out.width=OUT; out.height=OUT;
+  const ctx=out.getContext("2d");
+  const img=document.getElementById("crop-img");
+  const srcScale=1/crop.scale;
+  const sx=-crop.offX*srcScale, sy=-crop.offY*srcScale, sSize=CROP_VP*srcScale;
+  ctx.drawImage(img,sx,sy,sSize,sSize,0,0,OUT,OUT);
+  out.toBlob(blob=>{
+    S.pendingPhotoBlob=blob;
+    S.pendingPhotoPreview=out.toDataURL("image/jpeg",0.9);
+    S.cropSrc=null;
+    render();
+  },"image/jpeg",0.88);
+}
 function render(){
   const scr={loading:()=>'<div class="banner">Lädt …</div>',login:screenLogin,mfaVerify:screenMfaVerify,register:screenRegister,
     resetRequest:screenResetRequest,resetPassword:screenResetPassword,
@@ -439,6 +498,7 @@ function render(){
   const tabs=[["net","🕸️","Netzwerk"],["news","🔔","Mitteilungen"],["me","👤","Mein Profil"],["mem","💳","Mitgliedschaft"],["set","⚙️","Einstellungen"]];
   app.innerHTML=(showNav?brandBar():"")+(scr[S.view]||screenLogin)();
   navEl.hidden=!showNav;
+  if(S.cropSrc) bindCropper();
   if(showNav) navEl.firstElementChild.innerHTML=tabs.map(t=>`<button class="${S.tab===t[0]?"on":""}" data-go="${t[0]}"><span class="tabicon" aria-hidden="true">${t[1]}</span>${t[2]}</button>`).join("");
 }
 
@@ -556,6 +616,8 @@ document.addEventListener("click", async e=>{
     return;
   }
   if(t.id==="btn-edit-profile"){S.editing=true;render();return;}
+  if(t.id==="btn-crop-confirm"){ cropConfirm(); return; }
+  if(t.id==="btn-crop-cancel"){ S.cropSrc=null; render(); return; }
   if(t.id==="btn-logout"){ await sb.auth.signOut(); S.status=null;S.me=null;S.isAdmin=false; go("login"); return; }
   if(t.dataset.go){
     if(t.dataset.go==="me") S.editing=false;
@@ -584,7 +646,6 @@ document.addEventListener("click", async e=>{
   if(t.id==="btn-save-profile"){
     const val=id=>document.getElementById(id).value.trim();
     const catIds=[...document.querySelectorAll("[data-pf-cat]:checked")].map(x=>+x.value);
-    const photoFile=document.getElementById("pf-photo").files[0];
     const payload={first_name:val("pf-first"),last_name:val("pf-last"),headline:val("pf-headline"),
       profession_id:catIds[0]||null, profession_ids:catIds,
       company:val("pf-company"), show_company:document.getElementById("pf-show-company").checked,
@@ -592,13 +653,13 @@ document.addEventListener("click", async e=>{
       bio:val("pf-bio"),services:val("pf-services").split(",").map(s=>s.trim()).filter(Boolean),
       contact_email:val("pf-email"),published:true};
     S.busy=true;S.err=null;render();
-    if(photoFile){
-      const ext=(photoFile.name.split(".").pop()||"jpg").toLowerCase();
-      const path=S.session.user.id+"/photo."+ext;
-      const {error:upErr2}=await sb.storage.from("avatars").upload(path,photoFile,{upsert:true});
+    if(S.pendingPhotoBlob){
+      const path=S.session.user.id+"/photo.jpg";
+      const {error:upErr2}=await sb.storage.from("avatars").upload(path,S.pendingPhotoBlob,{upsert:true,contentType:"image/jpeg"});
       if(upErr2){S.busy=false;S.err="Foto konnte nicht hochgeladen werden: "+upErr2.message;render();return}
       const {data:pub}=sb.storage.from("avatars").getPublicUrl(path);
       payload.photo_path=pub.publicUrl+"?t="+Date.now();
+      S.pendingPhotoBlob=null; S.pendingPhotoPreview=null;
     }
     const {data:upd,error:upErr}=await sb.from("profiles").update(payload).eq("id",S.session.user.id).select();
     const error=upErr||((!upd||!upd.length)?{message:"Es wurde kein Profil aktualisiert. Bitte melde dich neu an."}:null);
@@ -711,6 +772,20 @@ app.addEventListener("input", e=>{
 });
 app.addEventListener("change", e=>{
   if(e.target.id==="loc-filter"){ S.loc=e.target.value; doSearch(); }
+  if(e.target.id==="pf-photo"){
+    const file=e.target.files[0];
+    if(!file) return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        S.cropSrc=reader.result; S.cropNaturalW=img.naturalWidth; S.cropNaturalH=img.naturalHeight;
+        crop.zoom=1; render();
+      };
+      img.src=reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
 });
 
 async function loadAdmin(){
