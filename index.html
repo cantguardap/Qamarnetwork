@@ -80,6 +80,19 @@ nav .tabicon{font-size:19px;line-height:1}
 .cropview img{position:absolute;left:0;top:0;transform-origin:0 0;user-select:none;-webkit-user-drag:none}
 .cropctrls{display:flex;align-items:center;gap:10px;max-width:240px;margin:0 auto 12px}
 .cropctrls input[type=range]{margin:0}
+.convo{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:12px 0;color:var(--ink)}
+.convo .av{flex:none}
+.convo .cname{font-weight:800}
+.convo .cprev{font-size:13px;color:var(--mid);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+.convo .cprev.unread{color:var(--ink);font-weight:700}
+.convo .cdot{width:9px;height:9px;border-radius:50%;background:var(--acc);flex:none}
+.bubbles{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.bubble{max-width:78%;padding:10px 13px;border-radius:16px;font-size:14px;line-height:1.4}
+.bubble.mine{align-self:flex-end;background:var(--acc);color:var(--onacc);border-bottom-right-radius:4px}
+.bubble.theirs{align-self:flex-start;background:var(--soft);border-bottom-left-radius:4px}
+.chatbar{position:sticky;bottom:70px;display:flex;gap:8px;background:var(--bg);padding:8px 0}
+.chatbar textarea{margin:0;min-height:44px;max-height:120px;resize:none}
+.chatbar button{flex:none;width:auto;margin:0;padding:12px 18px}
 </style>
 </head>
 <body>
@@ -97,7 +110,9 @@ const CONTACT_EMAIL="info@qamarnetwork.ch";
 const S={session:null,view:"loading",tab:"net",msg:null,err:null,busy:false,inRecovery:false,
   results:[],cat:-1,loc:"",locations:[],q:"",sel:null,me:null,status:null,isAdmin:false,pending:[],members:[],stats:null,
   mfaFactors:[],mfaEnroll:null,mfaChallenge:null,loginHistory:null,magicSent:false,announcements:null,
-  cropSrc:null,cropNaturalW:0,cropNaturalH:0,pendingPhotoBlob:null,pendingPhotoPreview:null};
+  cropSrc:null,cropNaturalW:0,cropNaturalH:0,pendingPhotoBlob:null,pendingPhotoPreview:null,
+  conversations:null,chatWith:null,chatMessages:null,unread:0,chatText:""};
+let chatPoll=null;
 const crop={scale:1,zoom:1,baseScale:1,offX:0,offY:0}; // laufende Crop-Werte, ausserhalb von S (kein Re-Render nötig beim Ziehen/Zoomen)
 
 // Einladungslink: ?code=XYZ in der URL füllt den Einladungscode automatisch vor.
@@ -240,7 +255,8 @@ function detail(){
   ${avatar(m,true)}<h1>${esc(m.first_name)} ${esc(m.last_name)}</h1><p>${esc(m.headline)}${m.company?", "+esc(m.company):""} ${m.location?"in "+esc(m.location):""}</p>
   ${catTags(m.profession_ids)}
   ${banner()}
-  <button class="btn" id="btn-reveal">Per E-Mail kontaktieren</button>
+  <button class="btn" id="btn-chat-open" data-chat-open="${m.id}">Nachricht senden</button>
+  <button class="btn ghost" id="btn-reveal">Per E-Mail kontaktieren</button>
   ${m.bio?`<h2>Über mich</h2><p>${esc(m.bio)}</p>`:""}
   ${m.services&&m.services.length?`<h2>Dienstleistungen</h2>${m.services.map(x=>`<span class="tag">${esc(x)}</span>`).join("")}`:""}
   ${m.specialization?`<h2>Spezialisierung</h2><p>${esc(m.specialization)}</p>`:""}`;
@@ -310,6 +326,28 @@ function screenNews(){
       ${S.isAdmin?`<div><button class="btn sm ghost" data-del-news="${x.id}">Löschen</button></div>`:""}
     </div>`).join(""):"<p>Noch keine Mitteilungen.</p>")}`;
 }
+function screenChat(){
+  const c=S.conversations;
+  return `<h1>Nachrichten</h1><p>Direktnachrichten mit anderen Mitgliedern.</p>
+  ${banner()}
+  ${c===null?"<p>Lädt …</p>":(c.length?c.map(x=>`<button class="convo" data-chat-open="${x.other_id}">
+      ${avatar({photo_path:x.photo_path,first_name:x.first_name,last_name:x.last_name})}
+      <div style="flex:1;min-width:0"><div class="cname">${esc(x.first_name)} ${esc(x.last_name)}</div>
+        <div class="cprev ${x.unread_count>0?"unread":""}">${x.last_mine?"Du: ":""}${esc(x.last_body)}</div></div>
+      ${x.unread_count>0?`<span class="cdot"></span>`:""}
+    </button>`).join(""):"<p>Noch keine Nachrichten. Öffne ein Profil im Netzwerk und schreib jemandem.</p>")}`;
+}
+function screenChatThread(){
+  const w=S.chatWith, m=S.chatMessages;
+  return `<button class="back" data-go="chat">Zurück zu Nachrichten</button>
+  <div class="brandbar">${avatar(w)}<span>${esc(w.first_name)} ${esc(w.last_name)}</span></div>
+  ${banner()}
+  <div class="bubbles">${m===null?"<p>Lädt …</p>":(m.length?m.map(x=>`<div class="bubble ${x.mine?"mine":"theirs"}">${esc(x.body)}</div>`).join(""):"<p style='text-align:center'>Noch keine Nachrichten — schreib die erste!</p>")}</div>
+  <div class="chatbar">
+    <textarea id="chat-input" placeholder="Nachricht schreiben …">${esc(S.chatText)}</textarea>
+    <button class="btn" id="btn-chat-send" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':'Senden'}</button>
+  </div>`;
+}
 function screenMem(){
   const active=S.status?.approval==='approved'&&S.status?.membership_active;
   const claimed=S.status?.payment_claimed_at;
@@ -375,7 +413,7 @@ function screenDataAccess(){
   return `<button class="back" data-go="set">Zurück</button><h1>Wer hat Zugriff auf meine Daten?</h1>
   <p>Deine vollständigen Profildaten können nur wir als Betreiber einsehen (zur Prüfung neuer Mitglieder). Andere aktive Mitglieder sehen ausschliesslich das, was du selbst in deinem Profil veröffentlichst.</p>
   <p>Deine E-Mail-Adresse wird anderen Mitgliedern nie direkt angezeigt — sie wird erst beim Klick auf "Per E-Mail kontaktieren" einmalig abgerufen, und diese Abrufe sind zusätzlich begrenzt, um automatisiertes Auslesen zu verhindern.</p>
-  <p>Es gibt keine Nachrichtenfunktion innerhalb der App, kein Tracking und keine Weitergabe deiner Daten an Dritte ausser den technischen Dienstleistern, die den Betrieb der App ermöglichen (siehe Datenschutzerklärung).</p>
+  <p>Direktnachrichten zwischen Mitgliedern sind nur für Absender*in und Empfänger*in sichtbar; wir als Betreiber können technisch darauf zugreifen (Datenbank-Hosting), lesen sie aber nicht routinemässig mit. Es gibt kein Tracking und keine Weitergabe deiner Daten an Dritte ausser den technischen Dienstleistern, die den Betrieb der App ermöglichen (siehe Datenschutzerklärung).</p>
   <button class="btn ghost" data-go="legalPrivacy">Zur Datenschutzerklärung</button>`;
 }
 function legalPage(title,text){
@@ -388,6 +426,8 @@ Verantwortlich für die Datenbearbeitung ist der Betreiber von Qamar Network (Ko
 Wir bearbeiten folgende Daten: Vor- und Nachname, E-Mail-Adresse, sowie die von dir freiwillig im Profil angegebenen Informationen (z. B. Angebot, Standort, Kategorie, Foto). Diese Angaben werden nach Freigabe deines Kontos für andere aktive Mitglieder im geschlossenen Netzwerk sichtbar.
 
 Die Mitgliedschaft in diesem Netzwerk kann Rückschlüsse auf deine Zugehörigkeit zur muslimischen Community zulassen. Diese Angabe gilt nach Schweizer Recht als besonders schützenswerte Personendaten. Wir bearbeiten sie nur mit deiner ausdrücklichen Einwilligung bei der Registrierung.
+
+Wenn du die Direktnachrichten-Funktion nutzt, werden deine Nachrichten gespeichert, um sie dir und der Empfängerin/dem Empfänger anzeigen zu können. Sie sind ausschliesslich für die beteiligten Personen einsehbar; wir lesen sie nicht routinemässig mit, haben aber als Betreiber der Datenbank technischen Zugriff darauf.
 
 Deine Daten werden bei Supabase (Datenbank-Hosting) gespeichert und bei Vercel (Web-Hosting) ausgeliefert. Beide Anbieter werden als Auftragsbearbeiter eingesetzt. Wir verwenden kein Analyse- oder Tracking-Tool und geben keine Daten an Werbenetzwerke weiter.
 
@@ -411,7 +451,7 @@ const LEGAL_TERMS=`Nutzungsbedingungen Qamar Network
 
 2. Mitglieder verpflichten sich, wahrheitsgemässe Angaben zu machen und andere Mitglieder respektvoll zu behandeln.
 
-3. Der Kontakt zwischen Mitgliedern erfolgt ausschliesslich per E-Mail (mailto-Link). Es findet keine Nachrichtenfunktion innerhalb der App statt.
+3. Der Kontakt zwischen Mitgliedern erfolgt per E-Mail oder über die Direktnachrichten-Funktion innerhalb der App. Nachrichten sind nur für die beteiligten Personen sichtbar; Missbrauch (Belästigung, respektlose Nachrichten) kann dem Betreiber gemeldet werden und zur Sperrung führen.
 
 4. Der Betreiber kann Konten bei Missbrauch sperren oder Anträge ablehnen.
 
@@ -491,15 +531,17 @@ function render(){
   const scr={loading:()=>'<div class="banner">Lädt …</div>',login:screenLogin,mfaVerify:screenMfaVerify,register:screenRegister,
     resetRequest:screenResetRequest,resetPassword:screenResetPassword,
     checkemail:screenCheckEmail,pending:screenPending,lockedNoPay:screenLockedNoPay,
-    net:screenNet,news:screenNews,me:screenMe,mem:screenMem,set:screenSet,admin:screenAdmin,
+    net:screenNet,news:screenNews,chat:screenChat,chatThread:screenChatThread,me:screenMe,mem:screenMem,set:screenSet,admin:screenAdmin,
     loginHistory:screenLoginHistory,dataAccess:screenDataAccess,
     legalPrivacy:()=>legalPage("Datenschutz",LEGAL_PRIVACY),legalImprint:()=>legalPage("Impressum",LEGAL_IMPRINT),legalTerms:()=>legalPage("Nutzungsbedingungen",LEGAL_TERMS)};
-  const showNav=["net","news","me","mem","set"].includes(S.view);
-  const tabs=[["net","🕸️","Netzwerk"],["news","🔔","Mitteilungen"],["me","👤","Mein Profil"],["mem","💳","Mitgliedschaft"],["set","⚙️","Einstellungen"]];
+  const showNav=["net","news","chat","chatThread","me","mem","set"].includes(S.view);
+  const tabs=[["net","🕸️","Netzwerk"],["news","🔔","Mitteilungen"],["chat","💬"+(S.unread>0?" •":""),"Nachrichten"],["me","👤","Mein Profil"],["mem","💳","Mitgliedschaft"],["set","⚙️","Einstellungen"]];
+  const navTab=S.view==="chatThread"?"chat":S.tab;
   app.innerHTML=(showNav?brandBar():"")+(scr[S.view]||screenLogin)();
   navEl.hidden=!showNav;
   if(S.cropSrc) bindCropper();
-  if(showNav) navEl.firstElementChild.innerHTML=tabs.map(t=>`<button class="${S.tab===t[0]?"on":""}" data-go="${t[0]}"><span class="tabicon" aria-hidden="true">${t[1]}</span>${t[2]}</button>`).join("");
+  if(showNav) navEl.firstElementChild.innerHTML=tabs.map(t=>`<button class="${navTab===t[0]?"on":""}" data-go="${t[0]}"><span class="tabicon" aria-hidden="true">${t[1]}</span>${t[2]}</button>`).join("");
+  if(S.view!=="chatThread" && chatPoll){ clearInterval(chatPoll); chatPoll=null; }
 }
 
 // ---------- Datenfluss ----------
@@ -513,7 +555,7 @@ async function loadAfterLogin(){
     sb.rpc("am_i_admin")
   ]);
   S.status=ms; S.me=pf; S.isAdmin=!!adm;
-  if(ms && ms.approval==='approved' && ms.membership_active){ go("net","net"); doSearch(); loadLocations(); }
+  if(ms && ms.approval==='approved' && ms.membership_active){ go("net","net"); doSearch(); loadLocations(); loadUnread(); }
   else if(ms && ms.approval==='pending'){ go("pending"); }
   else { go("lockedNoPay"); }
 }
@@ -527,6 +569,33 @@ async function loadNews(){
   S.announcements=error?[]:data;
   if(error) S.err="Konnte Mitteilungen nicht laden: "+error.message;
   render();
+}
+async function loadConversations(){
+  S.conversations=null; render();
+  const {data,error}=await sb.rpc("list_conversations");
+  S.conversations=error?[]:data;
+  if(error) S.err="Konnte Nachrichten nicht laden: "+error.message;
+  render();
+}
+async function loadUnread(){
+  const {data,error}=await sb.rpc("unread_message_count");
+  if(!error){ S.unread=data||0; render(); }
+}
+async function openChat(otherProfile){
+  S.chatWith=otherProfile; S.chatMessages=null; S.chatText="";
+  go("chatThread");
+  await loadMessages();
+  loadUnread();
+  if(chatPoll) clearInterval(chatPoll);
+  chatPoll=setInterval(loadMessages,5000);
+}
+async function loadMessages(){
+  if(!S.chatWith) return;
+  const {data,error}=await sb.rpc("list_messages",{p_other:S.chatWith.id});
+  if(error) return;
+  const changed=!S.chatMessages || S.chatMessages.length!==(data||[]).length;
+  S.chatMessages=data||[];
+  if(changed) render(); // vermeidet, dass ein laufender Tastatur-Eintrag beim Poll verloren geht
 }
 async function loadMfaFactors(){
   const {data,error}=await sb.auth.mfa.listFactors();
@@ -610,7 +679,7 @@ document.addEventListener("click", async e=>{
     S.busy=true;S.err=null;render();
     const {data:ok,error:codeErr}=await sb.rpc("use_invite_code",{p_code:code});
     if(codeErr||!ok){S.busy=false;S.err="Ungültiger oder abgelaufener Einladungscode.";render();return}
-    const {error}=await sb.auth.signUp({email,password:pass,options:{data:{first_name:first,last_name:last,consent_visibility:"true",consent_version:"1"}}});
+    const {error}=await sb.auth.signUp({email,password:pass,options:{data:{first_name:first,last_name:last,invite_code:code,consent_visibility:"true",consent_version:"1"}}});
     S.busy=false;
     if(error){S.err="Registrierung fehlgeschlagen: "+error.message;render()} else {go("checkemail")}
     return;
@@ -623,11 +692,29 @@ document.addEventListener("click", async e=>{
     if(t.dataset.go==="me") S.editing=false;
     if(t.dataset.go==="set"){ S.confirmDelete=false; S.mfaEnroll=null; loadMfaFactors(); }
     if(t.dataset.go==="loginHistory") loadLoginHistory();
-    go(t.dataset.go, ["net","news","me","mem","set"].includes(t.dataset.go)?t.dataset.go:undefined);
+    if(chatPoll){ clearInterval(chatPoll); chatPoll=null; }
+    go(t.dataset.go, ["net","news","chat","me","mem","set"].includes(t.dataset.go)?t.dataset.go:undefined);
     if(t.dataset.go==="net"){ S.sel=null; doSearch(); loadLocations(); }
     if(t.dataset.go==="news"){ loadNews(); }
+    if(t.dataset.go==="chat"){ S.chatWith=null; loadConversations(); }
     if(t.dataset.go==="admin"){ loadAdmin(); }
     return; }
+  if(t.dataset.chatOpen){
+    const id=t.dataset.chatOpen;
+    let prof=(S.sel&&S.sel.id===id)?S.sel:null;
+    if(!prof){ const c=(S.conversations||[]).find(x=>x.other_id===id);
+      prof=c?{id:c.other_id,first_name:c.first_name,last_name:c.last_name,photo_path:c.photo_path}:{id,first_name:"",last_name:"",photo_path:null}; }
+    openChat(prof); return; }
+  if(t.id==="btn-chat-send"){
+    const body=(S.chatText||"").trim();
+    if(!body) return;
+    S.busy=true;render();
+    const {error}=await sb.from("messages").insert({recipient_id:S.chatWith.id,body});
+    S.busy=false;
+    if(error){S.err="Konnte nicht gesendet werden: "+error.message;render();return}
+    S.chatText="";
+    await loadMessages();
+    render(); return; }
   if(t.dataset.cat!==undefined){ S.cat=+t.dataset.cat; doSearch(); return; }
   if(t.dataset.sel){ const m=S.results.find(x=>x.id===t.dataset.sel);
     S.busy=true;render();
@@ -769,6 +856,7 @@ document.addEventListener("click", async e=>{
 });
 app.addEventListener("input", e=>{
   if(e.target.id==="q"){ S.q=e.target.value; scheduleSearch(); }
+  if(e.target.id==="chat-input"){ S.chatText=e.target.value; }
 });
 app.addEventListener("change", e=>{
   if(e.target.id==="loc-filter"){ S.loc=e.target.value; doSearch(); }
