@@ -92,6 +92,12 @@ const S={session:null,view:"loading",tab:"net",msg:null,err:null,busy:false,
   results:[],cat:-1,loc:"",locations:[],q:"",sel:null,me:null,status:null,isAdmin:false,pending:[],members:[],stats:null,
   mfaFactors:[],mfaEnroll:null,mfaChallenge:null,loginHistory:null,magicSent:false,announcements:null};
 
+// Einladungslink: ?code=XYZ in der URL füllt den Einladungscode automatisch vor.
+(function(){
+  const inviteCode=new URLSearchParams(location.search).get("code");
+  if(inviteCode) S.reg={code:inviteCode};
+})();
+
 const app=document.getElementById("app"), navEl=document.getElementById("nav");
 
 // ---- Logo: Netzwerk-Mond mit einem hervorgehobenen Knotenpunkt ----
@@ -175,10 +181,13 @@ function screenPending(){
   <button class="btn ghost" id="btn-logout">Abmelden</button>`;
 }
 function screenLockedNoPay(){
+  const claimed=S.status?.payment_claimed_at;
   return `<h1>Zugriff freischalten</h1><p>Dein Profil ist freigegeben. Es fehlt noch der Jahresbeitrag von CHF 60.–, dann schalten wir dich frei.</p><p style="font-weight:800">Investiere in dein Netzwerk.</p>
   ${banner()}
   <a class="btn" href="${TWINT_LINK}" target="_blank" rel="noopener">Jetzt mit TWINT bezahlen</a>
-  <p style="font-size:13px">Nach der Zahlung prüfen wir den Eingang von Hand und schalten dich anschliessend frei.</p>
+  ${claimed?`<div class="ok">Zahlung gemeldet am ${esc(fmtDate(claimed))}. Wir prüfen und schalten dich in Kürze frei.</div>`
+   :`<button class="btn ghost" id="btn-claim-payment" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':''}Ich habe bezahlt</button>`}
+  <p style="font-size:13px">Nach der Zahlung prüfen wir den Eingang und schalten dich anschliessend frei.</p>
   <p style="font-size:13px;margin-top:18px">Hast du einen Gutscheincode?</p>
   <input id="voucher-code" placeholder="Gutscheincode" style="text-transform:uppercase">
   <button class="btn ghost" id="btn-voucher" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':''}Einlösen</button>
@@ -266,12 +275,15 @@ function screenNews(){
 }
 function screenMem(){
   const active=S.status?.approval==='approved'&&S.status?.membership_active;
+  const claimed=S.status?.payment_claimed_at;
   return `<h1>Mitgliedschaft</h1><p>Status: <b>${active?"Aktiv":S.status?.approval==='pending'?"Warten auf Freigabe":"Nicht aktiv"}</b></p>
   <p>Jahresbeitrag: <b>CHF 60.–</b></p>
   <p style="font-weight:800">Investiere in dein Netzwerk.</p>
   ${banner()}
   <a class="btn" href="${TWINT_LINK}" target="_blank" rel="noopener">Jetzt mit TWINT bezahlen</a>
-  <div class="banner">Nach der Zahlung prüfen wir den Zahlungseingang von Hand und schalten dein Konto frei bzw. verlängern deine Mitgliedschaft. Das kann etwas Zeit in Anspruch nehmen.</div>
+  ${claimed?`<div class="ok">Zahlung gemeldet am ${esc(fmtDate(claimed))}. Wir prüfen und schalten dich in Kürze frei.</div>`
+   :`<button class="btn ghost" id="btn-claim-payment" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':''}Ich habe bezahlt</button>`}
+  <div class="banner">Nach der Zahlung prüfen wir den Zahlungseingang und schalten dein Konto frei bzw. verlängern deine Mitgliedschaft.</div>
   <p style="font-size:13px;margin-top:18px">Hast du einen Gutscheincode?</p>
   <input id="voucher-code" placeholder="Gutscheincode" style="text-transform:uppercase">
   <button class="btn ghost" id="btn-voucher" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':''}Einlösen</button>
@@ -376,6 +388,11 @@ function screenAdmin(){
   return `<button class="back" data-go="set">Zurück</button><h1>Administration</h1>
   ${banner()}
   <div class="stats"><div class="stat"><b>${st.gesamt??"…"}</b>Mitglieder gesamt</div><div class="stat"><b>${st.aktiv??"…"}</b>Aktiv</div></div>
+  ${(()=>{const claims=(S.members||[]).filter(m=>m.payment_claimed_at&&!(m.approval==="approved"&&m.membership_active));
+    return claims.length?`<h2>💰 Gemeldete Zahlungen</h2>${claims.map(m=>{
+      const nm=((m.first_name||"")+" "+(m.last_name||"")).trim();
+      return `<div class="row"><div><b>${esc(nm||"(noch kein Name)")}</b><br><span style="color:var(--mid);font-size:14px">${esc(m.email)}<br>Gemeldet am ${esc(fmtDate(m.payment_claimed_at))}</span></div>
+      <div><button class="btn sm" data-approve="${m.user_id}">Freigeben</button><button class="btn sm ghost" data-dismiss-claim="${m.user_id}">Ignorieren</button></div></div>`}).join("")}`:""})()}
   <h2>Wartende Anträge</h2>
   ${S.pending.map(p=>`<div class="row"><div><b>${esc((p.first_name+" "+p.last_name).trim()||"(noch kein Name)")}</b><br><span style="color:var(--mid);font-size:14px">${esc(p.email)}${p.headline?" · "+esc(p.headline):""}</span></div>
     <div><button class="btn sm" data-approve="${p.user_id}">Freigeben</button><button class="btn sm ghost" data-reject="${p.user_id}">Ablehnen</button></div></div>`).join("")||"<p>Keine offenen Anträge.</p>"}
@@ -406,7 +423,7 @@ function render(){
 // ---------- Datenfluss ----------
 async function loadAfterLogin(){
   S.session=(await sb.auth.getSession()).data.session;
-  if(!S.session){go("login");return}
+  if(!S.session){go(S.reg?.code?"register":"login");return}
   const [{data:ms}, {data:pf}, {data:adm}] = await Promise.all([
     sb.from("member_status").select("*").eq("user_id",S.session.user.id).maybeSingle(),
     sb.from("profiles").select("*").eq("id",S.session.user.id).maybeSingle(),
@@ -619,6 +636,14 @@ document.addEventListener("click", async e=>{
     S.msg="Mitteilung veröffentlicht."; loadNews(); return; }
   if(t.dataset.delNews){
     await sb.from("announcements").delete().eq("id",t.dataset.delNews); loadNews(); return; }
+  if(t.id==="btn-claim-payment"){
+    S.busy=true;S.err=null;render();
+    const {error}=await sb.rpc("claim_payment");
+    S.busy=false;
+    if(error){S.err="Konnte nicht gemeldet werden: "+error.message;render();return}
+    S.status={...S.status,payment_claimed_at:new Date().toISOString()};
+    S.msg="Danke! Zahlung gemeldet — wir prüfen und schalten dich in Kürze frei.";
+    render(); return; }
   if(t.id==="btn-voucher"){
     const code=document.getElementById("voucher-code").value.trim().toUpperCase();
     if(!code){S.err="Bitte einen Gutscheincode eingeben.";render();return}
@@ -631,6 +656,7 @@ document.addEventListener("click", async e=>{
     render();
     return; }
   if(t.dataset.approve){ await sb.from("member_status").update({approval:"approved",membership_active:true}).eq("user_id",t.dataset.approve); loadAdmin(); return; }
+  if(t.dataset.dismissClaim){ await sb.rpc("dismiss_payment_claim",{p_user_id:t.dataset.dismissClaim}); loadAdmin(); return; }
   if(t.dataset.block){ await sb.from("member_status").update({approval:"blocked"}).eq("user_id",t.dataset.block); loadAdmin(); return; }
   if(t.dataset.reject){ await sb.from("member_status").update({approval:"rejected"}).eq("user_id",t.dataset.reject); loadAdmin(); return; }
 });
