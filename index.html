@@ -263,6 +263,11 @@ function screenRegister(){
   <input id="re-first" placeholder="Vorname" autocomplete="given-name" value="${esc(S.reg?.first)}">
   <input id="re-last" placeholder="Nachname" autocomplete="family-name" value="${esc(S.reg?.last)}">
   <input id="re-code" placeholder="Einladungscode" value="${esc(S.reg?.code)}">
+  <p style="font-size:13px;margin:14px 0 6px">Geschlecht</p>
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <button type="button" class="chip${S.reg?.gender==="m"?" on":""}" data-gender="m" style="flex:1">Mann</button>
+    <button type="button" class="chip${S.reg?.gender==="f"?" on":""}" data-gender="f" style="flex:1">Frau</button>
+  </div>
   <input id="re-email" type="email" placeholder="E-Mail-Adresse" autocomplete="email" value="${esc(S.reg?.email)}">
   <input id="re-pass" type="password" placeholder="Passwort (mind. 6 Zeichen)" autocomplete="new-password">
   <label class="checkline">
@@ -527,6 +532,7 @@ const LEGAL_TERMS=`Nutzungsbedingungen Qamar Network
 6. Es besteht kein Anspruch auf Aufnahme in das Netzwerk.
 
 (Dieser Text ist ein Entwurf und sollte vor dem offiziellen Start rechtlich geprüft werden.)`;
+const genderTag=g=>g==="f"?`<span style="font-size:11px;color:var(--mid)">♀ Frau</span>`:g==="m"?`<span style="font-size:11px;color:var(--mid)">♂ Mann</span>`:"";
 function screenAdmin(){
   const st=S.stats||{};
   return `<button class="back" data-go="set">Zurück</button><h1>Administration</h1>
@@ -538,7 +544,7 @@ function screenAdmin(){
       return `<div class="row"><div><b>${esc(nm||"(noch kein Name)")}</b><br><span style="color:var(--mid);font-size:14px">${esc(m.email)}<br>Gemeldet am ${esc(fmtDate(m.payment_claimed_at))}</span></div>
       <div><button class="btn sm" data-approve="${m.user_id}">Freigeben</button><button class="btn sm ghost" data-dismiss-claim="${m.user_id}">Ignorieren</button></div></div>`}).join("")}`:""})()}
   <h2>Wartende Anträge</h2>
-  ${S.pending.map(p=>`<div class="row"><div><b>${esc((p.first_name+" "+p.last_name).trim()||"(noch kein Name)")}</b><br><span style="color:var(--mid);font-size:14px">${esc(p.email)}${p.headline?" · "+esc(p.headline):""}</span></div>
+  ${S.pending.map(p=>`<div class="row"><div><b>${esc((p.first_name+" "+p.last_name).trim()||"(noch kein Name)")}</b> ${genderTag(p.gender)}<br><span style="color:var(--mid);font-size:14px">${esc(p.email)}${p.headline?" · "+esc(p.headline):""}</span></div>
     <div><button class="btn sm" data-approve="${p.user_id}">Freigeben</button><button class="btn sm ghost" data-reject="${p.user_id}">Ablehnen</button></div></div>`).join("")||"<p>Keine offenen Anträge.</p>"}
   <h2>Alle Mitglieder</h2>
   ${(S.members||[]).map(m=>{
@@ -547,7 +553,7 @@ function screenAdmin(){
     const st=aktiv?"Aktiv":m.approval==="approved"?"Freigegeben, Mitgliedschaft inaktiv":m.approval==="blocked"?"Gesperrt":m.approval==="rejected"?"Abgelehnt":m.approval==="deleted"?"Konto gelöscht":"Wartet auf Freigabe";
     const hint=aktiv&&!nm?" · ohne Namen, nicht sichtbar":"";
     const own=m.user_id===S.session?.user?.id;
-    return `<div class="row"><div><b>${esc(nm||"(noch kein Name)")}</b><br><span style="color:var(--mid);font-size:14px">${esc(m.email)}<br>${st}${hint}</span></div>
+    return `<div class="row"><div><b>${esc(nm||"(noch kein Name)")}</b> ${genderTag(m.gender)}<br><span style="color:var(--mid);font-size:14px">${esc(m.email)}<br>${st}${hint}</span></div>
       <div>${own||m.approval==="deleted"?"":(aktiv?`<button class="btn sm ghost" data-block="${m.user_id}">Sperren</button>`:`<button class="btn sm" data-approve="${m.user_id}">Freigeben</button>`)}</div></div>`}).join("")||"<p>Noch keine Mitglieder.</p>"}`;
 }
 
@@ -747,6 +753,10 @@ document.addEventListener("click", async e=>{
     await loadAfterLogin(); return;
   }
   if(t.id==="btn-mfa-cancel-login"){ await sb.auth.signOut(); go("login"); return; }
+  if(t.dataset.gender){
+    S.reg={...(S.reg||{}),gender:t.dataset.gender};
+    render(); return;
+  }
   if(t.id==="btn-register"){
     const first=document.getElementById("re-first").value.trim();
     const last=document.getElementById("re-last").value.trim();
@@ -754,13 +764,15 @@ document.addEventListener("click", async e=>{
     const email=document.getElementById("re-email").value.trim();
     const pass=document.getElementById("re-pass").value;
     const consent=document.getElementById("re-consent").checked;
-    S.reg={first,last,code,email,consent};
+    const gender=S.reg?.gender||"";
+    S.reg={first,last,code,email,consent,gender};
     if(!first||!last||!code||!email||!pass){S.err="Bitte alle Felder ausfüllen, auch Vor- und Nachname.";render();return}
+    if(!gender){S.err="Bitte wähle, ob du ein Mann oder eine Frau bist.";render();return}
     if(!consent){S.err="Bitte stimme der Sichtbarkeit deines Profils zu, sonst können wir dich nicht aufnehmen.";render();return}
     S.busy=true;S.err=null;render();
     const {data:ok,error:codeErr}=await sb.rpc("use_invite_code",{p_code:code});
     if(codeErr||!ok){S.busy=false;S.err="Ungültiger oder abgelaufener Einladungscode.";render();return}
-    const {error}=await sb.auth.signUp({email,password:pass,options:{data:{first_name:first,last_name:last,invite_code:code,consent_visibility:"true",consent_version:"1"}}});
+    const {error}=await sb.auth.signUp({email,password:pass,options:{data:{first_name:first,last_name:last,invite_code:code,gender,consent_visibility:"true",consent_version:"1"}}});
     S.busy=false;
     if(error){S.err="Registrierung fehlgeschlagen: "+error.message;render()} else {go("checkemail")}
     return;
