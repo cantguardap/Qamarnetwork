@@ -30,6 +30,7 @@ p{color:var(--mid);margin:0 0 12px}
 .ok{background:#E9F8EE;border:1px solid #2FA84F;color:#1E7A3A;border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:10px}
 input,select,textarea{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;margin-bottom:10px}
 textarea{min-height:90px}
+button,.card,.chip,.catbox,a{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 button{font:inherit;cursor:pointer}
 button:disabled{opacity:.5;cursor:default}
 button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
@@ -142,11 +143,26 @@ function screenLogin(){
     <button class="btn" id="btn-login" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':''}Anmelden</button>
     <button class="btn ghost" id="btn-magic" ${S.busy?"disabled":""}>Stattdessen Login-Link per E-Mail erhalten</button>
     <button class="btn ghost" data-go="register">Noch kein Konto? Registrieren</button>
+    <button class="btn ghost" data-go="resetRequest">Passwort vergessen?</button>
   </div>
   <p style="font-size:12px;margin-top:18px">
     <a href="#" data-go="legalPrivacy" style="color:var(--mid)">Datenschutz</a> ·
     <a href="#" data-go="legalImprint" style="color:var(--mid)">Impressum</a> ·
     <a href="#" data-go="legalTerms" style="color:var(--mid)">Nutzungsbedingungen</a></p>`;
+}
+function screenResetRequest(){
+  return `<button class="back" data-go="login">Zurück</button><h1>Passwort zurücksetzen</h1>
+  <p>Gib deine E-Mail-Adresse ein. Wir schicken dir einen Link, mit dem du ein neues Passwort setzen kannst.</p>
+  ${banner()}
+  <input id="rr-email" type="email" placeholder="E-Mail-Adresse" autocomplete="email" value="${esc(S.reg?.email)}">
+  <button class="btn" id="btn-reset-request" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':''}Link anfordern</button>`;
+}
+function screenResetPassword(){
+  return `<h1>Neues Passwort setzen</h1><p>Wähle ein neues Passwort für dein Konto.</p>
+  ${banner()}
+  <input id="rp-pass" type="password" placeholder="Neues Passwort (mind. 6 Zeichen)" autocomplete="new-password">
+  <input id="rp-pass2" type="password" placeholder="Neues Passwort wiederholen" autocomplete="new-password">
+  <button class="btn" id="btn-reset-confirm" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':''}Passwort speichern</button>`;
 }
 function screenMfaVerify(){
   return `<h1>Sicherheitscode</h1><p>Gib den 6-stelligen Code aus deiner Authenticator-App ein.</p>
@@ -409,6 +425,7 @@ function screenAdmin(){
 
 function render(){
   const scr={loading:()=>'<div class="banner">Lädt …</div>',login:screenLogin,mfaVerify:screenMfaVerify,register:screenRegister,
+    resetRequest:screenResetRequest,resetPassword:screenResetPassword,
     checkemail:screenCheckEmail,pending:screenPending,lockedNoPay:screenLockedNoPay,
     net:screenNet,news:screenNews,me:screenMe,mem:screenMem,set:screenSet,admin:screenAdmin,
     loginHistory:screenLoginHistory,dataAccess:screenDataAccess,
@@ -657,6 +674,25 @@ document.addEventListener("click", async e=>{
     return; }
   if(t.dataset.approve){ await sb.from("member_status").update({approval:"approved",membership_active:true}).eq("user_id",t.dataset.approve); loadAdmin(); return; }
   if(t.dataset.dismissClaim){ await sb.rpc("dismiss_payment_claim",{p_user_id:t.dataset.dismissClaim}); loadAdmin(); return; }
+  if(t.id==="btn-reset-request"){
+    const email=document.getElementById("rr-email").value.trim();
+    if(!email){S.err="Bitte deine E-Mail-Adresse eingeben.";render();return}
+    S.reg={...S.reg,email}; S.busy=true;S.err=null;render();
+    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin});
+    S.busy=false;
+    if(error){S.err="Konnte nicht gesendet werden: "+error.message} else {S.msg="Falls diese E-Mail-Adresse registriert ist, wurde ein Link zum Zurücksetzen gesendet. Bitte Postfach (auch Spam) prüfen."}
+    render(); return; }
+  if(t.id==="btn-reset-confirm"){
+    const pass=document.getElementById("rp-pass").value;
+    const pass2=document.getElementById("rp-pass2").value;
+    if(!pass||pass.length<6){S.err="Das Passwort muss mindestens 6 Zeichen haben.";render();return}
+    if(pass!==pass2){S.err="Die Passwörter stimmen nicht überein.";render();return}
+    S.busy=true;S.err=null;render();
+    const {error}=await sb.auth.updateUser({password:pass});
+    S.busy=false;
+    if(error){S.err="Konnte nicht gespeichert werden: "+error.message;render();return}
+    S.msg="Passwort gespeichert. Du bist jetzt angemeldet.";
+    await loadAfterLogin(); return; }
   if(t.dataset.block){ await sb.from("member_status").update({approval:"blocked"}).eq("user_id",t.dataset.block); loadAdmin(); return; }
   if(t.dataset.reject){ await sb.from("member_status").update({approval:"rejected"}).eq("user_id",t.dataset.reject); loadAdmin(); return; }
 });
@@ -676,6 +712,7 @@ async function loadAdmin(){
 
 sb.auth.onAuthStateChange((event,session)=>{
   S.session=session;
+  if(event==="PASSWORD_RECOVERY"){ go("resetPassword"); return; }
   if(event==="SIGNED_IN" && session){
     sb.from("login_history").insert({user_id:session.user.id,user_agent:navigator.userAgent}).then(()=>{});
   }
