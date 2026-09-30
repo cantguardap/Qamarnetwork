@@ -535,7 +535,7 @@ const LEGAL_TERMS=`Nutzungsbedingungen Qamar Network
 const genderTag=g=>g==="f"?`<span style="font-size:11px;color:var(--mid)">♀ Frau</span>`:g==="m"?`<span style="font-size:11px;color:var(--mid)">♂ Mann</span>`:"";
 
 function applicationRow(a){
-  return `<div class="row"><div><b>${esc((a.first_name+" "+a.last_name).trim())}</b> ${genderTag(a.gender)}<br><span style="color:var(--mid);font-size:14px">${esc(a.email)}${a.message?"<br>„"+esc(a.message)+"“":""}<br>${esc(fmtDate(a.created_at))}</span></div>
+  return `<div class="row"><div><b>${esc((a.first_name+" "+a.last_name).trim())}</b> ${genderTag(a.gender)}<br><span style="color:var(--mid);font-size:14px">${esc(a.email)} · <a href="tel:${esc(a.phone)}" style="color:var(--acc)">${esc(a.phone)}</a>${a.message?"<br>„"+esc(a.message)+"“":""}<br>${esc(fmtDate(a.created_at))}</span></div>
     <div><button class="btn sm" data-app-approve="${a.id}">Annehmen</button><button class="btn sm ghost" data-app-reject="${a.id}">Ablehnen</button></div></div>`;
 }
 function approvedApplicationRow(a){
