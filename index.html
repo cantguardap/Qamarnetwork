@@ -500,7 +500,10 @@ async function afterPasswordSignIn(){
 }
 
 document.addEventListener("click", async e=>{
-  const t=e.target;
+  // Klicks auf innere Elemente (Icon, Text, Foto) zählen als Klick auf den
+  // umschliessenden Button/Link — sonst reagiert z. B. eine Mitglieder-Karte
+  // nur, wenn man exakt den Rand trifft statt des Inhalts.
+  const t=e.target.closest("button,a")||e.target;
   if(t.id==="btn-login"){
     const email=document.getElementById("li-email").value.trim();
     const pass=document.getElementById("li-pass").value;
