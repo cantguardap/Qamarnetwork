@@ -75,7 +75,7 @@ const S={gender:"",busy:false,err:null,done:false,f:{}};
 function render(){
   if(S.done){
     app.innerHTML=`<div class="hero">${logo(56,"#ffffff")}<h1>Bewerbung erhalten</h1>
-      <p>Danke für dein Interesse an Qamar Network. Wir prüfen deine Angaben persönlich und melden uns bei dir per E-Mail, sobald wir entschieden haben.</p></div>
+      <p>Danke für dein Interesse an Qamar Network. Eine zuständige Fachperson meldet sich in den nächsten Tagen persönlich telefonisch oder per E-Mail bei dir, um die weiteren Schritte zu besprechen.</p></div>
       <p>Falls du Fragen hast, kannst du uns jederzeit kontaktieren.</p>`;
     return;
   }
@@ -89,7 +89,7 @@ function render(){
     <p style="font-weight:800;letter-spacing:.02em;color:#fff">Investiere in dein Netzwerk.</p></div>
 
   <div class="pillars">
-    <div class="pillar"><b>Geschlossen &amp; geschützt</b>Jedes Profil wird persönlich geprüft, bevor es freigeschaltet wird.</div>
+    <div class="pillar"><b>Persönliche Prüfung</b>Eine zuständige Fachperson meldet sich bei dir telefonisch oder per E-Mail, um die nächsten Schritte zu besprechen.</div>
     <div class="pillar"><b>Getrennt nach Geschlecht</b>Männer und Frauen sehen sich innerhalb des Netzwerks nicht gegenseitig.</div>
     <div class="pillar"><b>Kein offener Zugang</b>Eine Registrierung ist nur mit persönlicher Freigabe und Einladungscode möglich.</div>
   </div>
@@ -103,9 +103,10 @@ function render(){
     <button type="button" class="chip${S.gender==="f"?" on":""}" data-gender="f" style="flex:1">Frau</button>
   </div>
   <input id="ap-email" type="email" placeholder="E-Mail-Adresse" autocomplete="email" value="${esc(S.f.email)}">
+  <input id="ap-phone" type="tel" placeholder="Handynummer" autocomplete="tel" value="${esc(S.f.phone)}">
   <textarea id="ap-msg" placeholder="Ein paar Worte zu dir (optional): Beruf, Wohnort, wie du von uns gehört hast …">${esc(S.f.msg)}</textarea>
   <button class="btn" id="btn-submit" ${S.busy?"disabled":""}>${S.busy?'<span class="spin"></span>':''}Bewerbung senden</button>
-  <p style="font-size:12px">Mit dem Absenden erklärst du dich einverstanden, dass wir deine Angaben zur Prüfung deiner Bewerbung speichern.</p>
+  <p style="font-size:12px">Eine zuständige Fachperson meldet sich anschliessend persönlich telefonisch oder per E-Mail bei dir, um die weiteren Schritte zu besprechen. Mit dem Absenden erklärst du dich einverstanden, dass wir deine Angaben zur Prüfung deiner Bewerbung speichern.</p>
   <footer>© Qamar Network</footer>`;
 }
 render();
@@ -117,12 +118,13 @@ app.addEventListener("click", async e=>{
     const first=document.getElementById("ap-first").value.trim();
     const last=document.getElementById("ap-last").value.trim();
     const email=document.getElementById("ap-email").value.trim();
+    const phone=document.getElementById("ap-phone").value.trim();
     const msg=document.getElementById("ap-msg").value.trim();
-    S.f={first,last,email,msg};
-    if(!first||!last||!email){ S.err="Bitte Vorname, Nachname und E-Mail-Adresse angeben."; render(); return; }
+    S.f={first,last,email,phone,msg};
+    if(!first||!last||!email||!phone){ S.err="Bitte Vorname, Nachname, E-Mail-Adresse und Handynummer angeben."; render(); return; }
     if(!S.gender){ S.err="Bitte wähle, ob du ein Mann oder eine Frau bist."; render(); return; }
     S.busy=true; S.err=null; render();
-    const {error}=await sb.rpc("submit_application",{p_first:first,p_last:last,p_email:email,p_gender:S.gender,p_message:msg});
+    const {error}=await sb.rpc("submit_application",{p_first:first,p_last:last,p_email:email,p_phone:phone,p_gender:S.gender,p_message:msg});
     S.busy=false;
     if(error){ S.err=error.message||"Bewerbung konnte nicht gesendet werden. Bitte später erneut versuchen."; render(); return; }
     S.done=true; render();
