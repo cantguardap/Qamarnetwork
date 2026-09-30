@@ -112,7 +112,7 @@ const S={session:null,view:"loading",tab:"net",msg:null,err:null,busy:false,inRe
   mfaFactors:[],mfaEnroll:null,mfaChallenge:null,loginHistory:null,magicSent:false,announcements:null,
   cropSrc:null,cropNaturalW:0,cropNaturalH:0,pendingPhotoBlob:null,pendingPhotoPreview:null,
   conversations:null,chatWith:null,chatMessages:null,unread:0,chatText:"",
-  pushPermission:(typeof Notification!=="undefined"?Notification.permission:"unsupported"),pushBusy:false};
+  pushPermission:(typeof Notification!=="undefined"?Notification.permission:"unsupported"),pushBusy:false,applications:null};
 let chatPoll=null;
 const crop={scale:1,zoom:1,baseScale:1,offX:0,offY:0}; // laufende Crop-Werte, ausserhalb von S (kein Re-Render nötig beim Ziehen/Zoomen)
 
@@ -533,6 +533,28 @@ const LEGAL_TERMS=`Nutzungsbedingungen Qamar Network
 
 (Dieser Text ist ein Entwurf und sollte vor dem offiziellen Start rechtlich geprüft werden.)`;
 const genderTag=g=>g==="f"?`<span style="font-size:11px;color:var(--mid)">♀ Frau</span>`:g==="m"?`<span style="font-size:11px;color:var(--mid)">♂ Mann</span>`:"";
+
+function applicationRow(a){
+  return `<div class="row"><div><b>${esc((a.first_name+" "+a.last_name).trim())}</b> ${genderTag(a.gender)}<br><span style="color:var(--mid);font-size:14px">${esc(a.email)}${a.message?"<br>„"+esc(a.message)+"“":""}<br>${esc(fmtDate(a.created_at))}</span></div>
+    <div><button class="btn sm" data-app-approve="${a.id}">Annehmen</button><button class="btn sm ghost" data-app-reject="${a.id}">Ablehnen</button></div></div>`;
+}
+function approvedApplicationRow(a){
+  const subject=encodeURIComponent("Willkommen bei Qamar Network");
+  const body=encodeURIComponent("Assalamu alaikum "+a.first_name+",\n\nDeine Bewerbung für Qamar Network wurde angenommen. Registriere dich hier mit deinem persönlichen Code:\n\nhttps://qamarnetwork.ch/?code="+a.invite_code+"\n\nViele Grüsse");
+  return `<div class="row"><div><b>${esc((a.first_name+" "+a.last_name).trim())}</b><br><span style="color:var(--mid);font-size:14px">${esc(a.email)} · Code: <span style="font-family:monospace">${esc(a.invite_code)}</span></span></div>
+    <div><a class="btn sm" href="mailto:${esc(a.email)}?subject=${subject}&body=${body}">E-Mail senden</a></div></div>`;
+}
+function screenAdminApplications(){
+  const apps=(S.applications||[]).filter(a=>a.status==="pending");
+  const approved=(S.applications||[]).filter(a=>a.status==="approved"&&a.invite_code);
+  let html=`<h2>📝 Bewerbungen${apps.length?" ("+apps.length+")":""}</h2>`;
+  html+=apps.length?apps.map(applicationRow).join(""):"<p>Keine neuen Bewerbungen.</p>";
+  if(approved.length){
+    html+=`<p style="font-size:13px;margin-top:14px">Angenommen, Code noch nicht verwendet:</p>`;
+    html+=approved.map(approvedApplicationRow).join("");
+  }
+  return html;
+}
 function screenAdmin(){
   const st=S.stats||{};
   return `<button class="back" data-go="set">Zurück</button><h1>Administration</h1>
@@ -543,6 +565,7 @@ function screenAdmin(){
       const nm=((m.first_name||"")+" "+(m.last_name||"")).trim();
       return `<div class="row"><div><b>${esc(nm||"(noch kein Name)")}</b><br><span style="color:var(--mid);font-size:14px">${esc(m.email)}<br>Gemeldet am ${esc(fmtDate(m.payment_claimed_at))}</span></div>
       <div><button class="btn sm" data-approve="${m.user_id}">Freigeben</button><button class="btn sm ghost" data-dismiss-claim="${m.user_id}">Ignorieren</button></div></div>`}).join("")}`:""})()}
+  ${screenAdminApplications()}
   <h2>Wartende Anträge</h2>
   ${S.pending.map(p=>`<div class="row"><div><b>${esc((p.first_name+" "+p.last_name).trim()||"(noch kein Name)")}</b> ${genderTag(p.gender)}<br><span style="color:var(--mid);font-size:14px">${esc(p.email)}${p.headline?" · "+esc(p.headline):""}</span></div>
     <div><button class="btn sm" data-approve="${p.user_id}">Freigeben</button><button class="btn sm ghost" data-reject="${p.user_id}">Ablehnen</button></div></div>`).join("")||"<p>Keine offenen Anträge.</p>"}
@@ -926,6 +949,8 @@ document.addEventListener("click", async e=>{
     S.msg="Gutschein eingelöst. Dein Beitrag entfällt – dein Konto wird trotzdem noch von uns geprüft, bevor es freigeschaltet wird.";
     render();
     return; }
+  if(t.dataset.appApprove){ S.busy=true;render(); const {error}=await sb.rpc("decide_application",{p_id:+t.dataset.appApprove,p_approve:true}); S.busy=false; if(error){S.err="Fehler: "+error.message;render();return} await loadAdmin(); return; }
+  if(t.dataset.appReject){ S.busy=true;render(); await sb.rpc("decide_application",{p_id:+t.dataset.appReject,p_approve:false}); S.busy=false; await loadAdmin(); return; }
   if(t.dataset.approve){ await sb.from("member_status").update({approval:"approved",membership_active:true}).eq("user_id",t.dataset.approve); loadAdmin(); return; }
   if(t.dataset.dismissClaim){ await sb.rpc("dismiss_payment_claim",{p_user_id:t.dataset.dismissClaim}); loadAdmin(); return; }
   if(t.id==="btn-reset-request"){
@@ -974,10 +999,10 @@ app.addEventListener("change", e=>{
 });
 
 async function loadAdmin(){
-  const [pend,st,all]=await Promise.all([sb.rpc("list_pending_members"), sb.rpc("admin_stats"), sb.rpc("list_all_members")]);
-  const firstErr=pend.error||st.error||all.error;
+  const [pend,st,all,apps]=await Promise.all([sb.rpc("list_pending_members"), sb.rpc("admin_stats"), sb.rpc("list_all_members"), sb.rpc("list_applications")]);
+  const firstErr=pend.error||st.error||all.error||apps.error;
   if(firstErr){ S.err="Admin-Daten konnten nicht geladen werden: "+firstErr.message; }
-  S.pending=pend.data||[]; S.members=all.data||[]; S.stats=(st.data&&st.data[0])||{}; render();
+  S.pending=pend.data||[]; S.members=all.data||[]; S.stats=(st.data&&st.data[0])||{}; S.applications=apps.data||[]; render();
 }
 
 sb.auth.onAuthStateChange((event,session)=>{
