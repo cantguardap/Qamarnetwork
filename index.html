@@ -112,7 +112,8 @@ const S={session:null,view:"loading",tab:"net",msg:null,err:null,busy:false,inRe
   mfaFactors:[],mfaEnroll:null,mfaChallenge:null,loginHistory:null,magicSent:false,announcements:null,
   cropSrc:null,cropNaturalW:0,cropNaturalH:0,pendingPhotoBlob:null,pendingPhotoPreview:null,
   conversations:null,chatWith:null,chatMessages:null,unread:0,chatText:"",
-  pushPermission:(typeof Notification!=="undefined"?Notification.permission:"unsupported"),pushBusy:false,applications:null};
+  pushPermission:(typeof Notification!=="undefined"?Notification.permission:"unsupported"),pushBusy:false,applications:null,
+  feeBannerDismissed:(function(){try{return localStorage.getItem("feeBannerDismissed2026")==="1"}catch(e){return false}})()};
 let chatPoll=null;
 const crop={scale:1,zoom:1,baseScale:1,offX:0,offY:0}; // laufende Crop-Werte, ausserhalb von S (kein Re-Render nötig beim Ziehen/Zoomen)
 
@@ -288,7 +289,7 @@ function screenPending(){
 }
 function screenLockedNoPay(){
   const claimed=S.status?.payment_claimed_at;
-  return `<h1>Zugriff freischalten</h1><p>Dein Profil ist freigegeben. Es fehlt noch der Jahresbeitrag von CHF 60.–, dann schalten wir dich frei.</p><p style="font-weight:800">Investiere in dein Netzwerk.</p>
+  return `<h1>Zugriff freischalten</h1><p>Dein Profil ist freigegeben. Dein erstes Mitgliedsjahr war kostenlos — jetzt ist die Verlängerung mit dem Jahresbeitrag von CHF 50.– fällig, dann schalten wir dich wieder frei.</p><p style="font-weight:800">Investiere in dein Netzwerk.</p>
   ${banner()}
   <a class="btn" href="${TWINT_LINK}" target="_blank" rel="noopener">Jetzt mit TWINT bezahlen</a>
   ${claimed?`<div class="ok">Zahlung gemeldet am ${esc(fmtDate(claimed))}. Wir prüfen und schalten dich in Kürze frei.</div>`
@@ -305,6 +306,9 @@ function screenNet(){
   if(S.sel) return detail();
   const r=S.results;
   return `<h1>Willkommen in deinem Netzwerk</h1><p>Finde Menschen, die ihre Fähigkeiten für andere einsetzen, und du kannst deine eigenen anbieten.</p>
+  ${S.feeBannerDismissed?"":`<div class="banner" style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+    <span>💡 Gute Nachricht: Der Jahresbeitrag von CHF 50.– wird erst ab dem zweiten Mitgliedsjahr fällig. Dein erstes Jahr ist kostenlos.</span>
+    <button id="btn-dismiss-fee-banner" style="border:0;background:none;color:var(--mid);font-size:18px;line-height:1;cursor:pointer;flex:none">×</button></div>`}
   ${banner()}
   <input id="q" type="search" placeholder="Name oder Angebot suchen" value="${esc(S.q)}">
   <select id="loc-filter"><option value="">Alle Standorte</option>${S.locations.map(l=>`<option value="${esc(l)}" ${S.loc===l?"selected":""}>${esc(l)}</option>`).join("")}</select>
@@ -415,7 +419,7 @@ function screenMem(){
   const active=S.status?.approval==='approved'&&S.status?.membership_active;
   const claimed=S.status?.payment_claimed_at;
   return `<h1>Mitgliedschaft</h1><p>Status: <b>${active?"Aktiv":S.status?.approval==='pending'?"Warten auf Freigabe":"Nicht aktiv"}</b></p>
-  <p>Jahresbeitrag: <b>CHF 60.–</b></p>
+  <p>Jahresbeitrag: <b>CHF 50.–</b> <span style="font-weight:400;color:var(--mid)">(dein erstes Mitgliedsjahr ist kostenlos)</span></p>
   <p style="font-weight:800">Investiere in dein Netzwerk.</p>
   ${banner()}
   <a class="btn" href="${TWINT_LINK}" target="_blank" rel="noopener">Jetzt mit TWINT bezahlen</a>
@@ -446,6 +450,11 @@ function screenSet(){
     <button class="btn ghost" id="btn-mfa-cancel">Abbrechen</button>`
    : totp?`<p>Zwei-Faktor-Anmeldung ist <b>aktiv</b>.</p><button class="btn danger" data-mfa-unenroll="${totp.id}">Deaktivieren</button>`
    : `<p>Schützt dein Konto zusätzlich mit einem Code aus einer Authenticator-App.</p><button class="btn" id="btn-mfa-enable">Aktivieren</button>`}
+
+  <h2>Hilfe &amp; Support</h2>
+  <p style="font-size:13px">Brauchst du Hilfe? Eine Fachperson meldet sich persönlich bei dir.</p>
+  <a class="btn ghost" href="mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Support-Anfrage Qamar Network")}&body=${encodeURIComponent("Hallo\n\nIch brauche Unterstützung bei folgendem:\n\n\n\nViele Grüsse")}">Support per E-Mail kontaktieren</a>
+  <p style="font-size:12px;color:var(--mid);margin-top:6px">Öffnet eine E-Mail an ${esc(CONTACT_EMAIL)}. Eine Fachperson meldet sich persönlich bei dir.</p>
 
   <h2>Jemanden vorschlagen</h2>
   <p style="font-size:13px">Kennst du jemanden, der gut ins Netzwerk passen würde? Schlage die Person direkt uns vor — wir melden uns persönlich und laden sie bei Bedarf ein.</p>
@@ -831,6 +840,7 @@ document.addEventListener("click", async e=>{
     S.chatText="";
     await loadMessages();
     render(); return; }
+  if(t.id==="btn-dismiss-fee-banner"){ S.feeBannerDismissed=true; try{localStorage.setItem("feeBannerDismissed2026","1")}catch(e){} render(); return; }
   if(t.id==="btn-push-enable"){
     S.pushBusy=true; render();
     await subscribeToPush(false);
@@ -951,7 +961,10 @@ document.addEventListener("click", async e=>{
     return; }
   if(t.dataset.appApprove){ S.busy=true;render(); const {error}=await sb.rpc("decide_application",{p_id:+t.dataset.appApprove,p_approve:true}); S.busy=false; if(error){S.err="Fehler: "+error.message;render();return} await loadAdmin(); return; }
   if(t.dataset.appReject){ S.busy=true;render(); await sb.rpc("decide_application",{p_id:+t.dataset.appReject,p_approve:false}); S.busy=false; await loadAdmin(); return; }
-  if(t.dataset.approve){ await sb.from("member_status").update({approval:"approved",membership_active:true}).eq("user_id",t.dataset.approve); loadAdmin(); return; }
+  if(t.dataset.approve){
+    const until=new Date(); until.setFullYear(until.getFullYear()+1);
+    await sb.from("member_status").update({approval:"approved",membership_active:true,membership_until:until.toISOString()}).eq("user_id",t.dataset.approve);
+    loadAdmin(); return; }
   if(t.dataset.dismissClaim){ await sb.rpc("dismiss_payment_claim",{p_user_id:t.dataset.dismissClaim}); loadAdmin(); return; }
   if(t.id==="btn-reset-request"){
     const email=document.getElementById("rr-email").value.trim();
